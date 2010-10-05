@@ -1,0 +1,56 @@
+<openerp>
+    <data>
+        <record id="view_task_typology_form" model="ir.ui.view">
+            <field name="name">project.task.typology.form</field>
+            <field name="model">project.task</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="project.view_task_form2"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/group/field[@name='progress']" position="after">
+                    <field name="typology_id" select="1"/>
+                </xpath>
+            </field>
+        </record>
+        
+        <record id="view_task_tree2" model="ir.ui.view">
+            <field name="name">project.task.tree.typology</field>
+            <field name="model">project.task</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="project.view_task_tree2"/>
+            <field name="arch" type="xml">
+                <field name="user_id" position="after">
+                    <field name="typology_id" select="1"/>
+                </field>
+            </field>
+        </record>
+        
+        <record id="view_task_typology_tree" model="ir.ui.view">
+            <field name="name">project.task.typology.form</field>
+            <field name="model">project.task</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="project.view_task_form2"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/group/field[@name='progress']" position="after">
+                    <field name="typology_id" select="1"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_task_search_form_fb" model="ir.ui.view">
+            <field name="name">project.task.typology.search</field>
+            <field name="model">project.task</field>
+            <field name="type">search</field>
+            <field name="inherit_id" ref="project.view_task_search_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="/search/group/field[@name='name']" position="after">
+                    <field name="typology_id" select="1"/>
+                </xpath>
+                <xpath expr="/search/group[@string='Group By...']/filter[@string='Project']" position="after">
+                	<separator orientation="vertical"/>
+                    <filter string="Typology" icon="terp-gtk-jump-to-ltr" domain="[]" context="{'group_by':'typology_id'}"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
