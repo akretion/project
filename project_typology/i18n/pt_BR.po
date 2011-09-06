@@ -1,0 +1,64 @@
+# Translation of OpenERP Server.
+# This file contains the translation of the following modules:
+#	* project_typology
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenERP Server 6.0.3\n"
+"Report-Msgid-Bugs-To: support@openerp.com\n"
+"POT-Creation-Date: 2011-09-06 17:20+0000\n"
+"PO-Revision-Date: 2011-09-06 17:20+0000\n"
+"Last-Translator: <>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: project_typology
+#: model:ir.module.module,shortdesc:project_typology.module_meta_information
+msgid "Project requiring typologies"
+msgstr "Project requiring typologies"
+
+#. module: project_typology
+#: model:ir.model,name:project_typology.model_project_task
+msgid "Task"
+msgstr "Tarefa"
+
+#. module: project_typology
+#: field:project.typology,name:0
+msgid "Name"
+msgstr "Nome"
+
+#. module: project_typology
+#: constraint:project.task:0
+msgid "Error ! Task end-date must be greater then task start-date"
+msgstr "Erro ! A data final deve ser igual ou maior do que a data inicial"
+
+#. module: project_typology
+#: model:ir.module.module,description:project_typology.module_meta_information
+msgid "\n"
+"\n"
+"        Adds typologies to organize the projects tasks.\n"
+"    "
+msgstr "\n"
+"\n"
+"        Adds typologies to organize the projects tasks.\n"
+"    "
+
+#. module: project_typology
+#: model:ir.model,name:project_typology.model_project_typology
+msgid "Type of tasks to organize projects"
+msgstr "Tipo de tarefas para organização dos projetos"
+
+#. module: project_typology
+#: constraint:project.task:0
+msgid "Error ! You cannot create recursive tasks."
+msgstr "Erro! Você não pode criar tarefas recursivas."
+
+#. module: project_typology
+#: view:project.task:0
+#: field:project.task,typology_id:0
+msgid "Typology"
+msgstr "Tipologia"
+
