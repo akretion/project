@@ -42,14 +42,14 @@
 
                 <!-- OPEN BLOCK LIST -->
                 <record model="ir.actions.act_window" id="action_proj_typology_list">
-                        <field name="name">Project Typologies</field>
+                        <field name="name">Task Typologies</field>
                         <field name="res_model">project.typology</field>
                         <field name="view_type">form</field>
                         <field name="view_mode">tree,form</field>
                 </record>
 
-        <menuitem name="Functional blocks" parent="project.menu_definitions" id="menu_proj_typologies"/>
-        <menuitem name="Functional blocks" parent="menu_proj_typologies" id="menu_proj_typologies_list" action="action_proj_typology_list" sequence="10"/>
+        <menuitem name="Task Typologies" parent="project.menu_definitions" id="menu_proj_typologies"/>
+        <menuitem name="Task Typologies" parent="menu_proj_typologies" id="menu_proj_typologies_list" action="action_proj_typology_list" sequence="10"/>
 
     </data>
 </openerp>
