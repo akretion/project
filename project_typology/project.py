@@ -30,8 +30,11 @@ class project_typology(osv.osv):
     _description = 'Type of tasks to organize projects'
     _columns = {
         'name': fields.char('Name', size=64, required=True, translate=True),
+        'product_id': fields.many2one('product.product', 'Product'),
                 }
-    
+
+    _order = 'name'    
+
 project_typology()
 
 class project_task(osv.osv):
