@@ -6,7 +6,7 @@
             <field name="type">form</field>
             <field name="inherit_id" ref="project.view_task_form2"/>
             <field name="arch" type="xml">
-                <xpath expr="/form/group/field[@name='progress']" position="after">
+                <xpath expr="//field[@name='progress']" position="after">
                     <field name="typology_id" select="1"/>
                 </xpath>
             </field>
@@ -30,10 +30,10 @@
             <field name="type">search</field>
             <field name="inherit_id" ref="project.view_task_search_form"/>
             <field name="arch" type="xml">
-                <xpath expr="/search/group/field[@name='name']" position="after">
+                <xpath expr="//field[@name='name']" position="after">
                     <field name="typology_id" select="1"/>
                 </xpath>
-                <xpath expr="/search/group[@string='Group By...']/filter[@string='Project']" position="after">
+                <xpath expr="//group[@string='Group By...']/filter[@string='Project']" position="after">
                 	<separator orientation="vertical"/>
                     <filter string="Typology" icon="terp-gtk-jump-to-ltr" domain="[]" context="{'group_by':'typology_id'}"/>
                 </xpath>
@@ -48,7 +48,7 @@
                         <field name="view_mode">tree,form</field>
                 </record>
 
-        <menuitem name="Task Typologies" parent="project.menu_definitions" id="menu_proj_typologies"/>
+        <menuitem name="Task Typologies" parent="base.menu_definitions" id="menu_proj_typologies"/>
         <menuitem name="Task Typologies" parent="menu_proj_typologies" id="menu_proj_typologies_list" action="action_proj_typology_list" sequence="10"/>
 
     </data>
