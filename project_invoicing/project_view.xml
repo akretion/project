@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  project_invoicing for OpenERP
+  Copyright (C) 2012 Akretion Benoît GUILLOT <benoit.guillot@akretion.com>
+  The licence is in the file __openerp__.py
+-->
+
+<openerp>
+    <data>
+    
+        <!-- INHERITED VIEW FOR THE OBJECT : project_project -->
+
+<!--        <record id="project_project_view_form" model="ir.ui.view">
+            <field name="name">project_invoicing.project_project.view_form</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="module_name_to_inherit.view_id" />
+            <field eval="16" name="priority"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="field_reference" position="after">
+                    </field>
+                </data>
+            </field>
+        </record>
+
+        <record id="project_project_view_tree" model="ir.ui.view">
+            <field name="name">project_invoicing.project_project.view_tree</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="module_name_to_inherit.view_id" />
+            <field eval="16" name="priority"/>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="field_reference" position="after">
+                    </field>
+                </data>
+            </field>
+        </record>
+    -->
+
+
+        <!-- INHERITED VIEW FOR THE OBJECT : project_task -->
+
+        <record id="view_task_form2" model="ir.ui.view">
+            <field name="name">project_invoicing.project_task.view_form</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="project.view_task_form2" />
+            <field eval="16" name="priority"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//field[@name='progress']" position="after">
+                        <field name="fixed_amount" />
+                        <field name="product_id"/>
+                        <field name="unit_price"/>
+                    </xpath>
+                    <page string="Extra Info" position="after">
+                        <page string="Accounting">
+                            <group name="varous_amount">
+                                <field name="planned_amount"/>
+                                <field name="invoiced_amount"/>
+                            </group>
+                            <separator string="Invoice Lines"/>
+                            <field name="invoice_line_ids" nolabel="1"/>
+                        </page>
+                    </page>
+                </data>
+            </field>
+        </record>
+
+<!--        <record id="project_task_view_tree" model="ir.ui.view">
+            <field name="name">project_invoicing.project_task.view_tree</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="module_name_to_inherit.view_id" />
+            <field eval="16" name="priority"/>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="field_reference" position="after">
+                    </field>
+                </data>
+            </field>
+        </record>-->
+        
+        <record id="view_task_to_invoice_filter" model="ir.ui.view">
+            <field name="name">project_invoice.project_task.to_invoice</field>
+            <field name="model">project.task</field>
+            <field name="arch" type="xml">
+                <search string="Search Task to Invoice">
+                    <field name="name" string="Tasks"/>
+                    <filter icon="terp-mail-message-new" string="Unread Messages" name="message_unread" domain="[('message_unread','=',True)]"/>
+                    <separator/>
+                    <filter name="draft" string="New" domain="[('state','=','draft')]" help="New Tasks" icon="terp-check"/>
+                    <filter name="open" string="In Progress" domain="[('state','=','open')]" help="In Progress Tasks" icon="terp-camera_test"/>
+                    <filter string="Pending" domain="[('state','=','pending')]" context="{'show_delegated':False}" help="Pending Tasks" icon="terp-gtk-media-pause"/>
+                    <separator/>
+                    <filter name="My project" string="Project" domain="[('project_id.user_id','=',uid)]" help="My Projects" icon="terp-check"/>
+                    <separator/>
+                    <filter string="My Tasks" domain="[('user_id','=',uid)]"  help="My Tasks" icon="terp-personal"/>
+                    <filter string="Unassigned Tasks" domain="[('user_id','=',False)]"  help="Unassigned Tasks" icon="terp-personal-"/>
+                    <separator/>
+                    <filter string="Deadlines" context="{'deadline_visible': False}" domain="[('date_deadline','&lt;&gt;',False)]"
+                        help="Show only tasks having a deadline" icon="terp-gnome-cpu-frequency-applet+"/>
+                    <field name="project_id"/>
+                    <field name="user_id"/>
+                    <group expand="0" string="Group By...">
+                        <filter string="Users" name="group_user_id" icon="terp-personal" domain="[]"  context="{'group_by':'user_id'}"/>
+                        <filter string="Project" name="group_project_id" icon="terp-folder-violet" domain="[]" context="{'group_by':'project_id'}"/>
+                        <filter string="Stage" name="group_stage_id" icon="terp-stage" domain="[]" context="{'group_by':'stage_id'}"/>
+                        <filter string="Deadline" icon="terp-gnome-cpu-frequency-applet+" domain="[]" context="{'group_by':'date_deadline'}"/>
+                        <filter string="Start Date" icon="terp-go-month" domain="[]" context="{'group_by':'date_start'}" groups="base.group_no_one"/>
+                        <filter string="End Date" icon="terp-go-month" domain="[]" context="{'group_by':'date_end'}" groups="base.group_no_one"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+    
+        <record id="action_task_to_invoice_open_tree" model="ir.actions.act_window">
+            <field name="name">Invoice Tasks</field>
+            <field name="res_model">project.task</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('state', '=', 'done'),('fixed_amount', '=', True),('invoice_line_ids', '=', False)]</field>
+            <field name="context">{}</field>
+            <field name="search_view_id" ref="view_task_to_invoice_filter"/>            
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to add some tasks to be invoiced.
+              </p><p>
+                This list shows every task you can invoice to the customer.
+                Select the lines and invoice from the '<i>more...</i>' contextual
+                menu to generate invoices automatically.
+              </p>
+            </field>
+        </record>
+        <menuitem
+            action="action_task_to_invoice_open_tree"
+            id="menu_task_to_invoice_tree"
+            parent="account.menu_finance_periodical_processing_billing"
+            sequence="2"/>
+
+            
+                    <!-- Menus -->
+        <record id="action_hr_analytic_timesheet_open_tree" model="ir.actions.act_window">
+            <field name="name">Invoice Tasks Work</field>
+            <field name="res_model">account.analytic.line</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('invoice_line_id', '=', False)]</field>
+            <field name="context">{'search_default_to_invoice': 1}</field>
+            <field name="search_view_id" ref="account.view_account_analytic_line_filter"/>            
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to add some tasks work to be invoiced.
+              </p><p>
+                This list shows every task you can invoice to the customer.
+                Select the lines and invoice from the '<i>more...</i>' contextual
+                menu to generate invoices automatically.
+              </p>
+            </field>
+        </record>
+        <menuitem
+            action="action_hr_analytic_timesheet_open_tree"
+            id="menu_hr_analytic_timesheet_tree"
+            parent="account.menu_finance_periodical_processing_billing"
+            sequence="1"/>
+
+
+
+    </data>
+</openerp>
