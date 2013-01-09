@@ -192,14 +192,16 @@ class project_task(Model):
             invoice_ids.append(invoice_id)
             invoice_obj.button_reset_taxes(cr, uid, [invoice_id], context)
         return invoice_ids
-    
+
+
 class account_analytic_line(Model):
     _inherit = 'account.analytic.line'
 
     _columns = {
         'invoice_line_id': fields.many2one('account.invoice.line', 'Invoice Line'),
     }
-    
+
+
 class HrAnalyticTimesheet(Model):
     _inherit = "hr.analytic.timesheet"
 
@@ -213,4 +215,12 @@ class HrAnalyticTimesheet(Model):
             task = task_obj.browse(cr, uid, task_id)
             if task.fixed_amount:
                 res['value']['to_invoice'] = False
+        return res
+
+    def on_change_user_id(self, cr, uid, ids, user_id, parent_product_id):
+        res = super(HrAnalyticTimesheet, self).on_change_user_id(cr, uid, ids, user_id)
+        if parent_product_id:
+            if not res.get('value'):
+                res['value'] = {}
+            res['value']['product_id'] = parent_product_id
         return res
