@@ -20,3 +20,4 @@
 ###############################################################################
 
 import project_task_invoice_create
+import hr_timesheet_invoice_create

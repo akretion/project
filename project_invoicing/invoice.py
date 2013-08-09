@@ -19,6 +19,14 @@
 #                                                                             #
 ###############################################################################
 
-import project
-import invoice
-import wizard
+from openerp.osv.orm import Model
+from openerp.osv import fields
+
+class account_invoice_line(Model):
+    _inherit = "account.invoice.line"
+
+    _columns = {
+        'task_id': fields.many2one('project.task', 'Task'),
+        'timesheet_line_ids': fields.one2many('hr.analytic.timesheet', 'invoice_line_id', 'Analytic Line'),
+        'user_id': fields.many2one('res.users', 'User', help='The person that did the job'),
+    }

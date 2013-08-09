@@ -19,24 +19,14 @@
 #                                                                             #
 ###############################################################################
 
-from openerp.osv.orm import Model
-from openerp.osv import fields
+from openerp.osv import fields, orm
 import time
 from tools.translate import _
 from openerp.osv.osv import except_osv
 
 
-class project_project(Model):
-    
-    _inherit = "project.project"
-    
-    _columns = {
+class project_task(orm.Model):
 
-    }
-
-
-class project_task(Model):
-    
     _inherit = "project.task"
 
     def _get_task_product(self, cr, uid, task, context=None):
@@ -53,71 +43,106 @@ class project_task(Model):
         for task in self.browse(cr, uid, ids, context=context):
             res[task.id] = self._get_planned_amount_for_task(cr, uid, task, context=context)
         return res
-    
+
     def _get_planned_amount_for_task(self, cr, uid, task, context=None):
         precision_obj = self.pool.get('decimal.precision')
+        pricelist_obj = self.pool.get('product.pricelist')
         res = {}
+        if not task.project_id or not task.project_id.pricelist_id:
+            return res
         pricelist_id = task.project_id.pricelist_id.id
         planned_amount = 0.0
         product = self._get_task_product(cr, uid, task, context=context)
         if product:
             if not task.unit_price:
-                unit_price = self.pool.get('product.pricelist').price_get(cr, uid,
-                                                    [pricelist_id], product.id, task.planned_hours, context=context
-                                                    ).setdefault(pricelist_id, 0)
+                unit_price = pricelist_obj.price_get(
+                    cr, uid, [pricelist_id], product.id, task.planned_hours,
+                    context=context).setdefault(pricelist_id, 0)
             else:
                 unit_price = task.unit_price
-            planned_amount = task.planned_hours * round(unit_price, precision_obj.precision_get(cr, uid, 'Sale Price'))
+            planned_amount = task.planned_hours * round(
+                unit_price, precision_obj.precision_get(cr, uid, 'Sale Price'))
         res = planned_amount
         return res
 
-    def _get_invoiced_amount(self, cr, uid, ids, field_names, args, context=None):
+    def _get_invoice_amount(self, cr, uid, ids, field_names, args, context=None):
         #we call another merhod in order to overide it in an other module easyly
         res = {}
         for task in self.browse(cr, uid, ids, context=context):
             res[task.id] = self._get_invoiced_amount_for_task(cr, uid, task, context=context)
         return res
-    
+
     def _get_invoiced_amount_for_task(self, cr, uid, task, context=None):
         res = {}
-        invoiced_amount = 0.0
+        invoiced_amount = invoiceable_amount = 0.0
         for invoice_line in task.invoice_line_ids:
-            invoiced_amount += invoice_line.price_subtotal
-        res = invoiced_amount
+            if invoice_line.invoice_id.state in ['open', 'paid']:
+                invoiced_amount += invoice_line.price_subtotal
+        return invoiced_amount
+
+    def _get_task_from_invoice(self, cr, uid, ids, context=None):
+        res = []
+        for invoice in self.browse(cr, uid, ids, context=context):
+            res += [line.task_id.id for line in invoice.invoice_line]
+        print "recompute task", res
         return res
-    
+
     def _get_task_from_project(self, cr, uid, ids, context=None):
-        res = self.pool.get('project.task').search(cr, uid, [('project_id', 'in', ids)], context=context)
+        res = self.pool.get('project.task').search(cr, uid,
+                                                   [('project_id', 'in', ids)],
+                                                   context=context)
         return res
-    
+
     def _get_task_from_typo(self, cr, uid, ids, context=None):
-        res = self.pool.get('project.task').search(cr, uid, [('typology_id', 'in', ids)], context=context)
+        res = self.pool.get('project.task').search(cr, uid,
+                                                   [('typology_id', 'in', ids)],
+                                                   context=context)
         return res
 
     _columns = {
         'product_id': fields.many2one('product.product', 'Product'),
-        'invoice_line_ids': fields.one2many('account.invoice.line', 'task_id', 'Invoice Lines'),
-        'planned_amount': fields.function(_get_planned_amount, string='Planned Amount', type='float',
+        'invoice_line_ids': fields.one2many('account.invoice.line', 'task_id',
+                                            'Invoice Lines'),
+        'planned_amount': fields.function(_get_planned_amount,
+                                          string='Planned Amount',
+                                          type='float',
                                           store = {
-                            'project.project': (_get_task_from_project, ['pricelist_id'], 10),
-                            'project.task': (lambda self, cr, uid, ids, c={}: ids, ['planned_hours', 'product_id',
-                                                                                    'typology_id', 'fixed_amount',
-                                                                                    'project_id', 'unit_price'], 20),
-                            'project.typology': (_get_task_from_typo, ['product_id'], 30),
+                            'project.project': (_get_task_from_project,
+                                                ['pricelist_id'],
+                                                10),
+                            'project.task': (lambda self, cr, uid, ids, c={}: ids,
+                                             ['planned_hours', 'product_id',
+                                              'typology_id', 'fixed_amount',
+                                             'project_id', 'unit_price'],
+                                             20),
+                            'project.typology': (_get_task_from_typo,
+                                                 ['product_id'],
+                                                 30),
                                             }),
-        'invoiced_amount': fields.function(_get_invoiced_amount, string='Invoiced Amount', type='float',
-                                          store = {
-                            'project.project': (_get_task_from_project, ['pricelist_id'], 10),
-                            'project.task': (lambda self, cr, uid, ids, c={}: ids, ['planned_hours', 'product_id',
-                                                                                    'typology_id', 'invoice_line_ids',
-                                                                                    'project_id', 'unit_price'], 20),
-                            'project.typology': (_get_task_from_typo, ['product_id'], 30),
-                                            }),
+        'invoiced_amount': fields.function(_get_invoice_amount,
+            string='Invoiced Amount',
+            type='float',
+            store = {
+                'account.invoice': (
+                    _get_task_from_invoice,
+                    ['state'],
+                    10),
+            },
+        ),
+#        'invoiceable_amount': fields.function(_get_invoice_amount,
+#            string='Invoiceable Amount',
+#            type='float',
+#            store = {
+#                'account.invoice': (_get_task_from_invoice, ['state'], 10),
+#            },
+#            multi='invoice',
+#        ),
         'fixed_amount': fields.boolean('Fixed Amount'),
-        'unit_price': fields.related('sale_order_line_id', 'price_unit', type='float', relation='sale.order.line',
-            string="Unit Price"),
+        'unit_price': fields.related('sale_order_line_id', 'price_unit',
+                                     type='float', relation='sale.order.line',
+                                     string="Unit Price"),
     }
-    
+
     def _prepare_invoice_line_vals(self, cr, uid, task, context=None):
         fiscal_pos_obj = self.pool.get('account.fiscal.position')
         product = self._get_task_product(cr, uid, task, context=context)
@@ -125,7 +150,9 @@ class project_task(Model):
             raise except_osv(_('Error'), _('At least one task has no product !'))
         general_account = product.product_tmpl_id.property_account_income or product.categ_id.property_account_income_categ
         taxes = product.taxes_id
-        tax = fiscal_pos_obj.map_tax(cr, uid, task.project_id.partner_id.property_account_position, taxes)
+        tax = fiscal_pos_obj.map_tax(cr, uid,
+                                     task.project_id.partner_id.property_account_position,
+                                     taxes)
         invoice_line_vals = {
                     'price_unit': task.planned_amount,
                     'quantity': 1,
@@ -140,15 +167,16 @@ class project_task(Model):
                     'task_id': task.id,
         }
         return invoice_line_vals
-    
+
     def _prepare_invoice_vals(self, cr, uid, project, grouped_tasks, context=None):
         account_payment_term_obj = self.pool.get('account.payment.term')
         partner = project.partner_id
         if (not partner) or not (project.pricelist_id):
             raise except_osv(_('Analytic Account incomplete'),
-                        _('Please fill in the Partner or Customer and Sale Pricelist fields in the Analytic Account:\n%s') % (project.name,))
+                        _('Please fill in the Partner or Customer and Sale '
+                          'Pricelist fields in the Analytic Account:\n%s') % (project.name,))
 
-        #Garder ou pas ? 
+        #Garder ou pas ?
         #date_due = False
         #if partner.property_payment_term:
         #    pterm_list= account_payment_term_obj.compute(cr, uid,
@@ -181,35 +209,36 @@ class project_task(Model):
         project_dict = {}
         for task in self.browse(cr, uid, ids, context=context):
             if not task.fixed_amount:
-                raise except_osv(_('Error'), _('The task should not be invoiced that way'))
+                raise except_osv(_('Error'),
+                                 _('The task should not be invoiced that way'))
             if project_dict.get(task.project_id):
                 project_dict[task.project_id].append(task)
             else:
                 project_dict[task.project_id] = [task]
         for project, grouped_tasks in project_dict.items():
-            invoice_vals =  self._prepare_invoice_vals(cr, uid, project, grouped_tasks, context=context)
+            invoice_vals =  self._prepare_invoice_vals(cr, uid,
+                                                       project,
+                                                       grouped_tasks,
+                                                       context=context)
             invoice_id = invoice_obj.create(cr, uid, invoice_vals, context=context)
             invoice_ids.append(invoice_id)
             invoice_obj.button_reset_taxes(cr, uid, [invoice_id], context)
         return invoice_ids
 
 
-class account_analytic_line(Model):
-    _inherit = 'account.analytic.line'
+class HrAnalyticTimesheet(orm.Model):
+    _inherit = "hr.analytic.timesheet"
 
     _columns = {
         'invoice_line_id': fields.many2one('account.invoice.line', 'Invoice Line'),
     }
 
-
-class HrAnalyticTimesheet(Model):
-    _inherit = "hr.analytic.timesheet"
-
-    def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount, company_id,
-                              unit=False, journal_id=False, task_id=False, to_invoice=False, context=None):
-        res = super(HrAnalyticTimesheet, self).on_change_unit_amount(cr, uid, sheet_id, prod_id, unit_amount,
-                                                                     company_id, unit, journal_id, task_id, to_invoice,
-                                                                     context)
+    def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount,
+                              company_id, unit=False, journal_id=False,
+                              task_id=False, to_invoice=False, context=None):
+        res = super(HrAnalyticTimesheet, self).on_change_unit_amount(
+            cr, uid, sheet_id, prod_id, unit_amount, company_id, unit,
+            journal_id, task_id, to_invoice, context)
         if 'value' in res and task_id:
             task_obj = self.pool.get('project.task')
             task = task_obj.browse(cr, uid, task_id)
