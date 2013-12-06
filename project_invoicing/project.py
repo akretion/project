@@ -100,10 +100,12 @@ class project_task(orm.Model):
         return res
 
     _columns = {
-        'product_id': fields.many2one('product.product', 'Product'),
+        'product_id': fields.many2one('product.product', 'Product'),#use for pack
+
         'invoice_line_ids': fields.one2many('account.invoice.line', 'task_id',
                                             'Invoice Lines'),
-        'planned_amount': fields.function(_get_planned_amount,
+         #STILL NEEDED??
+         'planned_amount': fields.function(_get_planned_amount,
                                           string='Planned Amount',
                                           type='float',
                                           store = {
@@ -119,6 +121,8 @@ class project_task(orm.Model):
                                                  ['product_id'],
                                                  30),
                                             }),
+        
+        ################################# STILL NEEDED END
         'invoiced_amount': fields.function(_get_invoice_amount,
             string='Invoiced Amount',
             type='float',
@@ -230,6 +234,7 @@ class HrAnalyticTimesheet(orm.Model):
     _inherit = "hr.analytic.timesheet"
 
     _columns = {
+        #MAYBE REPLACE BY SUBCONTRACTOR
         'invoice_line_id': fields.many2one('account.invoice.line', 'Invoice Line'),
     }
 

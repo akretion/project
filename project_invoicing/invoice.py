@@ -27,6 +27,8 @@ class account_invoice_line(Model):
 
     _columns = {
         'task_id': fields.many2one('project.task', 'Task'),
+        #TODO move timesheet on subcontractor work
         'timesheet_line_ids': fields.one2many('hr.analytic.timesheet', 'invoice_line_id', 'Analytic Line'),
-        'user_id': fields.many2one('res.users', 'User', help='The person that did the job'),
+        #TODO FIXME replace by subcontractor work
+    	'user_id': fields.many2one('res.users', 'User', help='The person that did the job'),
     }
