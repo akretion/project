@@ -8,14 +8,12 @@
 <openerp>
     <data>
 
-        <!-- INHERITED VIEW FOR THE OBJECT : project_task -->
+        <!-- INHERITED VIEW FOR THE OBJECT : project_task 
 
         <record id="view_task_form2" model="ir.ui.view">
             <field name="name">project_invoicing.project_task.view_form</field>
             <field name="model">project.task</field>
             <field name="inherit_id" ref="timesheet_task.view_task_form2" />
-            <field eval="16" name="priority"/>
-            <field name="type">form</field>
             <field name="arch" type="xml">
                 <data>
                     <xpath expr="//field[@name='progress']" position="after">
@@ -42,7 +40,7 @@
                     </xpath>
                 </data>
             </field>
-        </record>
+        </record>-->
 
         <record id="view_task_to_invoice_filter" model="ir.ui.view">
             <field name="name">project_invoice.project_task.to_invoice</field>
