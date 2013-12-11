@@ -23,125 +23,19 @@ from openerp.osv import fields, orm
 import time
 from tools.translate import _
 from openerp.osv.osv import except_osv
+import openerp.addons.decimal_precision as dp
 
 
 class project_task(orm.Model):
-
     _inherit = "project.task"
-
-    def _get_task_product(self, cr, uid, task, context=None):
-        product = False
-        if task.product_id:
-            product = task.product_id
-        elif task.typology_id:
-            product = task.typology_id.product_id
-        return product
-
-    def _get_planned_amount(self, cr, uid, ids, field_names, args, context=None):
-        #we call another method in order to overide it in an other module easyly
-        res = {}
-        for task in self.browse(cr, uid, ids, context=context):
-            res[task.id] = self._get_planned_amount_for_task(cr, uid, task, context=context)
-        return res
-
-    def _get_planned_amount_for_task(self, cr, uid, task, context=None):
-        precision_obj = self.pool.get('decimal.precision')
-        pricelist_obj = self.pool.get('product.pricelist')
-        res = {}
-        if not task.project_id or not task.project_id.pricelist_id:
-            return res
-        pricelist_id = task.project_id.pricelist_id.id
-        planned_amount = 0.0
-        product = self._get_task_product(cr, uid, task, context=context)
-        if product:
-            if not task.unit_price:
-                unit_price = pricelist_obj.price_get(
-                    cr, uid, [pricelist_id], product.id, task.planned_hours,
-                    context=context).setdefault(pricelist_id, 0)
-            else:
-                unit_price = task.unit_price
-            planned_amount = task.planned_hours * round(
-                unit_price, precision_obj.precision_get(cr, uid, 'Sale Price'))
-        res = planned_amount
-        return res
-
-    def _get_invoice_amount(self, cr, uid, ids, field_names, args, context=None):
-        #we call another merhod in order to overide it in an other module easyly
-        res = {}
-        for task in self.browse(cr, uid, ids, context=context):
-            res[task.id] = self._get_invoiced_amount_for_task(cr, uid, task, context=context)
-        return res
-
-    def _get_invoiced_amount_for_task(self, cr, uid, task, context=None):
-        res = {}
-        invoiced_amount = invoiceable_amount = 0.0
-        for invoice_line in task.invoice_line_ids:
-            if invoice_line.invoice_id.state in ['open', 'paid']:
-                invoiced_amount += invoice_line.price_subtotal
-        return invoiced_amount
-
-    def _get_task_from_invoice(self, cr, uid, ids, context=None):
-        res = []
-        for invoice in self.browse(cr, uid, ids, context=context):
-            res += [line.task_id.id for line in invoice.invoice_line]
-        print "recompute task", res
-        return res
-
-    def _get_task_from_project(self, cr, uid, ids, context=None):
-        res = self.pool.get('project.task').search(cr, uid,
-                                                   [('project_id', 'in', ids)],
-                                                   context=context)
-        return res
-
-    def _get_task_from_typo(self, cr, uid, ids, context=None):
-        res = self.pool.get('project.task').search(cr, uid,
-                                                   [('typology_id', 'in', ids)],
-                                                   context=context)
-        return res
 
     _columns = {
         'product_id': fields.many2one('product.product', 'Product'),#use for pack
 
         'invoice_line_ids': fields.one2many('account.invoice.line', 'task_id',
                                             'Invoice Lines'),
-         #STILL NEEDED??
-         'planned_amount': fields.function(_get_planned_amount,
-                                          string='Planned Amount',
-                                          type='float',
-                                          store = {
-                            'project.project': (_get_task_from_project,
-                                                ['pricelist_id'],
-                                                10),
-                            'project.task': (lambda self, cr, uid, ids, c={}: ids,
-                                             ['planned_hours', 'product_id',
-                                              'typology_id', 'fixed_amount',
-                                             'project_id', 'unit_price'],
-                                             20),
-                            'project.typology': (_get_task_from_typo,
-                                                 ['product_id'],
-                                                 30),
-                                            }),
-        
-        ################################# STILL NEEDED END
-        'invoiced_amount': fields.function(_get_invoice_amount,
-            string='Invoiced Amount',
-            type='float',
-            store = {
-                'account.invoice': (
-                    _get_task_from_invoice,
-                    ['state'],
-                    10),
-            },
-        ),
-#        'invoiceable_amount': fields.function(_get_invoice_amount,
-#            string='Invoiceable Amount',
-#            type='float',
-#            store = {
-#                'account.invoice': (_get_task_from_invoice, ['state'], 10),
-#            },
-#            multi='invoice',
-#        ),
         'fixed_amount': fields.boolean('Fixed Amount'),
+        'price': fields.float('Price', digits_compute=dp.get_precision('Product Price')),
         'unit_price': fields.related('sale_order_line_id', 'price_unit',
                                      type='float', relation='sale.order.line',
                                      string="Unit Price"),
@@ -237,34 +131,7 @@ class HrAnalyticTimesheet(orm.Model):
         #MAYBE REPLACE BY SUBCONTRACTOR
         'invoice_line_id': fields.many2one('account.invoice.line', 'Invoice Line'),
     }
-    
-    def on_change_account_id(self, cr, uid, ids, account_id, user_id=False, context=None):
-        account_obj = self.pool.get('account.analytic.account')
-        res = super(HrAnalyticTimesheet, self).\
-                on_change_account_id(cr, uid, ids, account_id, user_id)
-        
-        if not res.get('domain'):
-            res['domain'] = {}
-         
-        res['domain']['task_id'] = [
-            ('state', '=', 'open'),
-            ('analytic_account_id', '=', account_id)
-        ]
-        return res
 
-    def on_change_task_id(self, cr, uid, ids, task_id, context=None):
-        res = {}
-        res['value'] = {}
-        task_obj=self.pool.get('project.task')
-        task=task_obj.browse(cr, uid, task_id, context=context)
-        if task.fixed_amount:
-            res['value']['to_invoice'] = 5
-        else:
-            res['value']['to_invoice'] = 1
-        return res
-
-
-    #TODO FIXME still usefull?
     def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount,
                               company_id, unit=False, journal_id=False,
                               task_id=False, to_invoice=False, context=None):
