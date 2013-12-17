@@ -48,20 +48,27 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
         hr_analytic_ids = context and context.get('active_ids', [])
         for hr_analytic in hr_analytic_obj.browse(cr, uid, hr_analytic_ids, context=context):
             if hr_analytic.invoice_id:
-                raise osv.except_osv(_('Warning!'), _("Invoice is already linked to the analytic line!") %hr_analytic.name)
+                raise osv.except_osv(_('Warning!'),
+                    _("Invoice is already linked to the analytic line!") %hr_analytic.name)
             if not hr_analytic.to_invoice:
-                raise osv.except_osv(_('Warning!'), _("the analytic line %s can not be invoiced!")%hr_analytic.name)
+                raise osv.except_osv(_('Warning!'),
+                    _("the analytic line %s can not be invoiced!")%hr_analytic.name)
 
     def do_create(self, cr, uid, ids, context=None):
-        data = self.read(cr, uid, ids, [], context=context)[0]
         # Create an invoice based on selected timesheet lines
-        invs = self.pool.get('hr.analytic.timesheet').invoice_cost_create(cr, uid, context['active_ids'], data, context=context)
+        timesheet_obj = self.pool.get('hr.analytic.timesheet')
         mod_obj = self.pool.get('ir.model.data')
         act_obj = self.pool.get('ir.actions.act_window')
-        mod_ids = mod_obj.search(cr, uid, [('name', '=', 'action_invoice_tree1')], context=context)[0]
+
+        data = self.read(cr, uid, ids, [], context=context)[0]
+        inv_ids = timesheet_obj.invoice_cost_create(cr, uid,
+            context['active_ids'], data, context=context)
+        mod_ids = mod_obj.search(cr, uid, [
+            ('name', '=', 'action_invoice_tree1')
+            ], context=context)[0]
         res_id = mod_obj.read(cr, uid, mod_ids, ['res_id'], context=context)['res_id']
         act_win = act_obj.read(cr, uid, res_id, [], context=context)
-        act_win['domain'] = [('id','in',invs),('type','=','out_invoice')]
+        act_win['domain'] = [('id', 'in', inv_ids),('type', '=', 'out_invoice')]
         act_win['name'] = _('Invoices')
         return act_win
 
