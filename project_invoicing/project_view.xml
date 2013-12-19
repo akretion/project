@@ -94,20 +94,27 @@
               </p>
             </field>
         </record>
+
+        <menuitem
+            id="menu_invoicing"
+            parent="base.menu_main_pm"
+            name="Invoicing"
+            sequence="20"/>
+
         <menuitem
             action="action_task_to_invoice_open_tree"
             id="menu_task_to_invoice_tree"
-            parent="project_timesheet.menu_project_billing"
-            sequence="2"/>
-
+            parent="menu_invoicing"
+            sequence="10"/>
+        
         <record id="action_hr_analytic_timesheet_open_tree" model="ir.actions.act_window">
             <field name="name">Invoice Tasks Work</field>
             <field name="res_model">hr.analytic.timesheet</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
-            <field name="domain">[('invoice_line_id', '=', False)]</field>
+            <field name="domain"></field>
             <field name="context">{'search_default_to_invoice': 1}</field>
-            <field name="search_view_id" ref="account.view_account_analytic_line_filter"/>            
+            <field name="search_view_id" ref="hr_timesheet_task.hr_timesheet_line_search"/>            
             <field name="help" type="html">
               <p class="oe_view_nocontent_create">
                 Click to add some tasks work to be invoiced.
@@ -118,12 +125,12 @@
               </p>
             </field>
         </record>
+        
         <menuitem
             action="action_hr_analytic_timesheet_open_tree"
             id="menu_hr_analytic_timesheet_tree"
-            parent="project_timesheet.menu_project_billing"
-            sequence="1"/>
-
+            parent="menu_invoicing"
+            sequence="20"/>
 
 
     </data>

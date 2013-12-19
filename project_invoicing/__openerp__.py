@@ -29,7 +29,10 @@
     'description': """empty""",
     'author': 'Akretion',
     'website': 'http://www.akretion.com/',
-    'depends': ['hr_timesheet_task'], 
+    'depends': [
+        'hr_timesheet_task',
+        'project_typology',
+    ], 
     'init_xml': [],
     'update_xml': [ 
            'project_view.xml',

@@ -61,7 +61,7 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
         act_obj = self.pool.get('ir.actions.act_window')
 
         data = self.read(cr, uid, ids, [], context=context)[0]
-        inv_ids = timesheet_obj.invoice_cost_create(cr, uid,
+        inv_ids = timesheet_obj.create_invoice(cr, uid,
             context['active_ids'], data, context=context)
         mod_ids = mod_obj.search(cr, uid, [
             ('name', '=', 'action_invoice_tree1')
