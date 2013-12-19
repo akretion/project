@@ -317,7 +317,10 @@ class HrAnalyticTimesheet(orm.Model):
                     line_ids.append(line.id)
                 invoice_line_vals['invoice_id'] = invoice_id
                 inv_line_id = invoice_line_obj.create(cr, uid, invoice_line_vals, context=context)
-                self.write(cr, uid, line_ids, {'invoice_line_id': inv_line_id}, context=context)
+                self.write(cr, uid, line_ids, {
+                    'invoice_line_id': inv_line_id,
+                    'invoice_id': invoice_id,
+                    }, context=context)
         return invoices_ids
 
 
