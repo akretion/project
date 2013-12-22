@@ -248,10 +248,12 @@ class HrAnalyticTimesheet(orm.Model):
 
     def _get_qty2invoice(self, cr, uid, line, context=None):
         uom_obj = self.pool['product.uom']
-        return uom_obj._compute_qty(cr, uid,
-                line.account_id.company_uom_id.id,
-                line.unit_amount,
-                to_uom_id=line.account_id.invoice_uom_id.id)
+        uom_id = line.account_id.invoice_uom_id.id
+        qty = uom_obj._compute_qty(cr, uid,
+            line.account_id.company_uom_id.id,
+            line.unit_amount,
+            to_uom_id=uom_id)
+        return uom_id, qty
     
     def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice_vals, context=None):
         invoice_line = self._play_onchange_on_line(cr, uid, line, invoice_vals, context=context)
@@ -260,22 +262,22 @@ class HrAnalyticTimesheet(orm.Model):
             name = line.task_id.typology_id.name
         else:
             name = line.task_id.name
-
+        uom_id, qty = self._get_qty2invoice(cr, uid, line, context=context)
         invoice_line.update({
                 'price_unit': self._get_price(cr, uid, line, context=context),
-                'quantity': self._get_qty2invoice(cr, uid, line, context=context),
+                'quantity': qty,
                 'discount': False,#TODO
                 'name': name,
                 'product_id': line.product_id.id,
-                'uos_id': line.product_uom_id.id,
+                'uos_id': uom_id,
                 'account_analytic_id': account.id,
-                'user_id': line.user_id.id,
                 'task_ids': [[6, 0, [line.task_id.id,]]]
             })
         return invoice_line
     
     def _update_invoice_line_vals(self, cr, uid, line, invoice_line_vals, context=None):
-        invoice_line_vals['quantity'] += self._get_qty2invoice(cr, uid, line, context=context)
+        uom_id, qty = self._get_qty2invoice(cr, uid, line, context=context)
+        invoice_line_vals['quantity'] += qty
         if not line.task_id.id in invoice_line_vals['task_ids'][0][2]:
             invoice_line_vals['task_ids'][0][2].append(line.task_id.id)
         return invoice_line_vals
