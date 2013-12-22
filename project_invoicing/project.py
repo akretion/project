@@ -36,6 +36,13 @@ class project_typology(orm.Model):
         'product_id': fields.many2one('product.product', 'Product'),
                 }
 
+class account_analytic_account(orm.Model):
+    _inherit = 'account.analytic.account'
+    
+    _columns = {
+        'invoice_uom_id': fields.many2one('product.uom', 'Invoicing UoM'),
+    }
+
 
 class project_task(orm.Model):
     _inherit = "project.task"
@@ -239,6 +246,13 @@ class HrAnalyticTimesheet(orm.Model):
                     company_id = invoice_vals['company_id'])
         return res.get('value', [])
 
+    def _get_qty2invoice(self, cr, uid, line, context=None):
+        uom_obj = self.pool['product.uom']
+        return uom_obj._compute_qty(cr, uid,
+                line.account_id.company_uom_id.id,
+                line.unit_amount,
+                to_uom_id=line.account_id.invoice_uom_id.id)
+    
     def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice_vals, context=None):
         invoice_line = self._play_onchange_on_line(cr, uid, line, invoice_vals, context=context)
         if line.task_id.typology_id and \
@@ -249,7 +263,7 @@ class HrAnalyticTimesheet(orm.Model):
 
         invoice_line.update({
                 'price_unit': self._get_price(cr, uid, line, context=context),
-                'quantity': line.unit_amount,
+                'quantity': self._get_qty2invoice(cr, uid, line, context=context),
                 'discount': False,#TODO
                 'name': name,
                 'product_id': line.product_id.id,
@@ -261,7 +275,7 @@ class HrAnalyticTimesheet(orm.Model):
         return invoice_line
     
     def _update_invoice_line_vals(self, cr, uid, line, invoice_line_vals, context=None):
-        invoice_line_vals['quantity'] += line.unit_amount
+        invoice_line_vals['quantity'] += self._get_qty2invoice(cr, uid, line, context=context)
         if not line.task_id.id in invoice_line_vals['task_ids'][0][2]:
             invoice_line_vals['task_ids'][0][2].append(line.task_id.id)
         return invoice_line_vals
