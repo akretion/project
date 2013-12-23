@@ -36,6 +36,7 @@
     'init_xml': [],
     'update_xml': [ 
            'project_view.xml',
+           'invoice_view.xml',
            'wizard/project_task_invoice_create_view.xml',
            'wizard/hr_timesheet_invoice_create_view.xml',
     ],

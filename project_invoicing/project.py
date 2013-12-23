@@ -117,6 +117,7 @@ class project_task(orm.Model):
                     'account_id': general_account.id,
                     'account_analytic_id': task.project_id.analytic_account_id.id,
                     'task_ids': [(6, 0, [task.id])],
+                    'invoicing_type': 'fixed_amount',
         }
         return invoice_line_vals
 
@@ -146,7 +147,7 @@ class project_task(orm.Model):
             'account_id': partner.property_account_receivable.id,
             'currency_id': project.pricelist_id.currency_id.id,
             #'date_due': date_due,
-            'fiscal_position': partner.property_account_position.id
+            'fiscal_position': partner.property_account_position.id,
         }
         lines_vals = []
         for task in grouped_tasks:
@@ -338,7 +339,8 @@ class HrAnalyticTimesheet(orm.Model):
                 'product_id': line.product_id.id,
                 'uos_id': uom_id,
                 'account_analytic_id': account.id,
-                'task_ids': [[6, 0, [line.task_id.id,]]]
+                'task_ids': [[6, 0, [line.task_id.id,]]],
+                'invoicing_type': 'time_base',
             })
         return invoice_line
     

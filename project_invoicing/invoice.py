@@ -32,4 +32,13 @@ class account_invoice_line(orm.Model):
             'hr.analytic.timesheet',
             'invoice_line_id',
             'Analytic Line'),
+        'invoicing_type': fields.selection([
+            ('fixed_amount', 'Fixed Amount'),
+            ('time_base', 'Time Base'),
+            ], 'Invoicing', required=True), 
     }
+
+    _defaults = {
+        'invoicing_type': 'time_base',
+    }
+
