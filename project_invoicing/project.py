@@ -51,9 +51,17 @@ class project_task(orm.Model):
         'product_id': fields.many2one('product.product', 'Product'),#use for pack
         'invoice_line_ids': fields.many2many('account.invoice.line',
                                             string='Invoice Lines'),
-        'fixed_amount': fields.boolean('Fixed Amount'),
         'unit_price': fields.float('Price', digits_compute=dp.get_precision('Product Price')),
+        'invoicing_type': fields.selection([
+            ('fixed_amount', 'Fixed Amount'),
+            ('time_base', 'Time Base'),
+            ], 'Invoicing', required=True),
     }
+
+    _defaults = {
+        'invoicing_type': 'time_base',
+    }
+
 
     def _get_task_product(self, cr, uid, task, context=None):
         product = False
@@ -152,7 +160,7 @@ class project_task(orm.Model):
         invoice_ids = []
         project_dict = {}
         for task in self.browse(cr, uid, ids, context=context):
-            if not task.fixed_amount:
+            if not task.invoicing_type == 'fixed_amount':
                 raise orm.except_orm(_('Error'),
                                  _('The task should not be invoiced that way'))
             if project_dict.get(task.project_id):
@@ -199,7 +207,7 @@ class HrAnalyticTimesheet(orm.Model):
         if task_id:
             task_obj = self.pool.get('project.task')
             fixed_amount_task = task_obj.search(cr, uid, [
-                ('fixed_amount', '=', True),
+                ('invoicing_type', '=', 'time_base'),
                 ('id', '=', task_id),
                 ], context=context)
 

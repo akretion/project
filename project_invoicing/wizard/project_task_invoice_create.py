@@ -45,7 +45,7 @@ class project_task_invoice_create(osv.osv_memory):
             if task.state != 'done':
                 raise except_osv(_('Warning!'),
                     _("The task must be done is you want to invoice it!"))
-            if not task.fixed_amount:
+            if not task.invoice_type != 'fixed_amount':
                 raise except_osv(_('Warning!'),
                     _("This task has not a fixed amout, you should not invoice"
                     "it this way, use the wizard on the task work instead!"))

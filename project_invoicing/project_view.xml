@@ -26,7 +26,7 @@
             <field name="inherit_id" ref="timesheet_task.view_task_form2" />
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='progress']" position="after">
-                    <field name="fixed_amount" />
+                    <field name="invoicing_type" />
                 </xpath>
             </field>
         </record>
@@ -81,7 +81,7 @@
             <field name="res_model">project.task</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
-            <field name="domain">[('state', '=', 'done'),('fixed_amount', '=', True),('invoice_line_ids', '=', False)]</field>
+            <field name="domain">[('state', '=', 'done'), ('invoicing_type', '=', 'fixed_amount'), ('invoice_line_ids', '=', False)]</field>
             <field name="context">{}</field>
             <field name="search_view_id" ref="view_task_to_invoice_filter"/>            
             <field name="help" type="html">
