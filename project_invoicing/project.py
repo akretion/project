@@ -388,11 +388,11 @@ class HrAnalyticTimesheet(orm.Model):
         #In case that we have all timesheet line believe to the same partner
         #we give the posibility in the wizard to update an existing invoice
         #instead of creating a new one
-        existing_invoice_id = 'invoice_id' in data and data['invoice_id'][0] or False
+        existing_invoice_id = data.get('invoice_id')
 
         for account, group_lines in self.group_lines(cr, uid, ids, context=context).iteritems():
             if existing_invoice_id:
-                invoice_id = existing_invoice_id
+                invoice_id = existing_invoice_id[0]
             else:
                 invoice_vals = self._prepare_invoice_vals(cr, uid, account, context=context)
                 ctx = context.copy()
