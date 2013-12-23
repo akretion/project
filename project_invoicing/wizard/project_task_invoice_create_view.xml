@@ -11,25 +11,14 @@
             <field name="name">project.task.invoice.create.form</field>
             <field name="model">project.task.invoice.create</field>
             <field name="arch" type="xml">
-            <form string="Create Invoice" version="7.0">
-                <notebook>
-                    <page string="Billing Data">
-                       <group>
-                       <group string="Do you want to show details of task in invoice?">
-<!--                           <field name="date"/>
-                           <field name="time"/>
-                           <field name="name"/>
-                           <field name="price"/>-->
-                       </group>
-                       </group>
-                    </page>
-                </notebook>
-                <footer>
-                    <button name="do_create" string="Create Invoices" type="object" class="oe_highlight"/>
-                    or
-                    <button string="Cancel" class="oe_link" special="cancel" />
-                </footer>
-            </form>
+                <form string="Create Invoice" version="7.0">
+                    <h1>Are you sure to create the invoice?</h1>
+                    <footer>
+                        <button name="do_create" string="Yes" type="object" class="oe_highlight"/>
+                        or
+                        <button string="No" class="oe_link" special="cancel" />
+                    </footer>
+                </form>
             </field>
         </record>
 
