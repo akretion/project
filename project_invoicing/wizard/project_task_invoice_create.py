@@ -40,15 +40,19 @@ class project_task_invoice_create(osv.osv_memory):
         task_ids = context and context.get('active_ids', [])
         for task in task_obj.browse(cr, uid, task_ids, context=context):
             if task.invoice_line_ids:
-                raise except_osv(_('Warning!'), _("Invoice lines are already linked to the task!"))
+                raise except_osv(_('Warning!'),
+                    _("Invoice lines are already linked to the task!"))
             if task.state != 'done':
-                raise except_osv(_('Warning!'), _("The task must be done is you want to invoice it!"))
+                raise except_osv(_('Warning!'),
+                    _("The task must be done is you want to invoice it!"))
             if not task.fixed_amount:
-                raise except_osv(_('Warning!'), _("This task has not a fixed amout, you should not invoice it this way, use the wizard on the task work instead!"))
+                raise except_osv(_('Warning!'),
+                    _("This task has not a fixed amout, you should not invoice"
+                    "it this way, use the wizard on the task work instead!"))
 
     def do_create(self, cr, uid, ids, context=None):
-        #data = self.browse(cr, uid, ids, context=context)
-        invoice_ids = self.pool.get('project.task').invoice_cost_create(cr, uid, context['active_ids'], context=context)
+        invoice_ids = self.pool.get('project.task')\
+                .create_invoice(cr, uid, context['active_ids'], context=context)
         mod_obj = self.pool.get('ir.model.data')
         act_obj = self.pool.get('ir.actions.act_window')
         mod_ids = mod_obj.search(cr, uid, [('name', '=', 'action_invoice_tree1')], context=context)[0]

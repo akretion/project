@@ -52,35 +52,63 @@ class project_task(orm.Model):
         'invoice_line_ids': fields.many2many('account.invoice.line',
                                             string='Invoice Lines'),
         'fixed_amount': fields.boolean('Fixed Amount'),
-        'price': fields.float('Price', digits_compute=dp.get_precision('Product Price')),
-        #TODO FIXME
-        #'unit_price': fields.related('sale_order_line_id', 'price_unit',
-        #                             type='float', relation='sale.order.line',
-        #                             string="Unit Price"),
+        'unit_price': fields.float('Price', digits_compute=dp.get_precision('Product Price')),
     }
+
+    def _get_task_product(self, cr, uid, task, context=None):
+        product = False
+        if task.product_id:
+            product = task.product_id
+        elif task.typology_id:
+            product = task.typology_id.product_id
+        return product
+
+    def _get_qty2invoice(self, cr, uid, task, context=None):
+        uom_obj = self.pool['product.uom']
+        uom_id = task.project_id.invoice_uom_id.id
+        qty = uom_obj._compute_qty(cr, uid,
+            task.project_id.company_uom_id.id,
+            task.planned_hours,
+            to_uom_id=uom_id)
+        return uom_id, qty
+
+    #TODO FIXME
+    #In my case the price is managed on the feature
+    #for now I do not know what is the best behaviour without
+    #this module so I implement a really simple version for now
+    def _get_price(self, cr, uid, task, product, context=None):
+        pricelist = task.project_id.pricelist_id
+        partner_id = task.project_id.partner_id.id
+        price = pricelist.price_get(
+                    product.id,
+                    1.0,
+                    partner_id,
+                    context=context)[pricelist.id]
+        return price
 
     def _prepare_invoice_line_vals(self, cr, uid, task, context=None):
         fiscal_pos_obj = self.pool.get('account.fiscal.position')
         product = self._get_task_product(cr, uid, task, context=context)
         if not product:
-            raise orm.except_orm(_('Error'), _('At least one task has no product !'))
+            raise orm.except_orm(_('Error'),
+                _('The task %s, have no product set. Fix it'%task.name))
         general_account = product.product_tmpl_id.property_account_income or product.categ_id.property_account_income_categ
         taxes = product.taxes_id
         tax = fiscal_pos_obj.map_tax(cr, uid,
                                      task.project_id.partner_id.property_account_position,
                                      taxes)
+        uom_id, qty = self._get_qty2invoice(cr, uid, task, context=context)
         invoice_line_vals = {
-                    'price_unit': task.planned_amount,
-                    'quantity': 1,
-                    'invoice_line_tax_id': [(6,0,tax )],
+                    'price_unit': self._get_price(cr, uid, task, product, context=context),
+                    'quantity': qty,
+                    'invoice_line_tax_id': [(6, 0, tax)],
                     'name': task.name,
                     'product_id': product.id,
-                    'invoice_line_tax_id': [(6,0,tax)],
-                    'uos_id': product.uom_id.id,
+                    'invoice_line_tax_id': [(6, 0, tax)],
+                    'uos_id': uom_id,
                     'account_id': general_account.id,
                     'account_analytic_id': task.project_id.analytic_account_id.id,
-                    'user_id': task.user_id.id,
-                    'task_id': task.id,
+                    'task_ids': [(6, 0, [task.id])],
         }
         return invoice_line_vals
 
@@ -237,12 +265,6 @@ class HrAnalyticTimesheet(orm.Model):
                 _('Please fill in the Pricelist on the Account:\n%s.') % (line.account_id.name,))
         return True
 
-    #TODO unit
-    # create the object project_unit (invoice_unit_id, task_unit_id)
-    # use it for converting day in hours and vice-versa
-    # with that we can convert many option (day=>hours, month=>day ...)    
-    # for us always hours on task, always day on invoice
-
     def group_lines(self, cr, uid, ids, context=None):
         """ return the line group"""
         result = defaultdict(lambda : defaultdict(list))
@@ -252,9 +274,12 @@ class HrAnalyticTimesheet(orm.Model):
             result[line.account_id][key].append(line)
         return result
 
+
+    #TODO FIXME
+    #In my case the price is managed on the feature
+    #for now I do not know what is the best behaviour without
+    #this module so I implement a really simple version for now 
     def _get_price(self, cr, uid, line, context=None):
-        #if line.task_id.unit_price:
-        #    return line.task_id.unit_price
         if line.product_id:
             pricelist = line.task_id.project_id.pricelist_id
             partner_id = line.task_id.project_id.partner_id.id
