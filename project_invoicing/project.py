@@ -148,6 +148,32 @@ class HrAnalyticTimesheet(orm.Model):
     _columns = {
         'invoice_line_id': fields.many2one('account.invoice.line', 'Invoice Line'),
     }
+    
+    def on_change_account_id(self, cr, uid, ids, account_id, user_id=False, context=None):
+        account_obj = self.pool.get('account.analytic.account')
+        res = super(HrAnalyticTimesheet, self).\
+                on_change_account_id(cr, uid, ids, account_id, user_id)
+        
+        if not res.get('domain'):
+            res['domain'] = {}
+         
+        res['domain']['task_id'] = [
+            ('state', '=', 'open'),
+            ('analytic_account_id', '=', account_id)
+        ]
+        return res
+
+    def on_change_task_id(self, cr, uid, ids, task_id, context=None):
+        res = {}
+        res['value'] = {}
+        task_obj=self.pool.get('project.task')
+        task=task_obj.browse(cr, uid, task_id, context=context)
+        #TODO FIXME
+        if task.fixed_amount:
+            res['value']['to_invoice'] = 5
+        else:
+            res['value']['to_invoice'] = 1
+        return res
 
 #Still needed??
 #    def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount,
