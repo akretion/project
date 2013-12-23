@@ -37,7 +37,7 @@
             <field name="inherit_id" ref="hr_timesheet_task.hr_timesheet_sheet_form_with_activity"/>
             <field name="arch" type="xml">
                 <field name="task_id" position="attributes">
-                    <attribute name="on_change">on_change_task_id(task_id)</attribute>
+                    <attribute name="on_change">on_change_task_id(account_id, task_id)</attribute>
                 </field>
             </field>
         </record>

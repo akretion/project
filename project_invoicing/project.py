@@ -150,30 +150,38 @@ class HrAnalyticTimesheet(orm.Model):
     }
     
     def on_change_account_id(self, cr, uid, ids, account_id, user_id=False, context=None):
-        account_obj = self.pool.get('account.analytic.account')
         res = super(HrAnalyticTimesheet, self).\
                 on_change_account_id(cr, uid, ids, account_id, user_id)
         
         if not res.get('domain'):
             res['domain'] = {}
-         
+        
+        project_obj = self.pool.get('project.project')
+        project_ids = project_obj.search(cr, uid, [
+            ('analytic_account_id', '=', account_id),
+            ], context=context)
+
         res['domain']['task_id'] = [
-            ('state', '=', 'open'),
-            ('analytic_account_id', '=', account_id)
+            ('state', 'not in', ['draft', 'done']),
+            ('project_id', 'in', project_ids)
         ]
         return res
 
-    def on_change_task_id(self, cr, uid, ids, task_id, context=None):
-        res = {}
-        res['value'] = {}
-        task_obj=self.pool.get('project.task')
-        task=task_obj.browse(cr, uid, task_id, context=context)
-        #TODO FIXME
-        if task.fixed_amount:
-            res['value']['to_invoice'] = 5
-        else:
-            res['value']['to_invoice'] = 1
-        return res
+    def on_change_task_id(self, cr, uid, ids, account_id, task_id, context=None):
+        if task_id:
+            task_obj = self.pool.get('project.task')
+            fixed_amount_task = task_obj.search(cr, uid, [
+                ('fixed_amount', '=', True),
+                ('id', '=', task_id),
+                ], context=context)
+
+            if fixed_amount_task:
+                return {'value': {'to_invoice': False}}
+        if account_id:
+            analytic_obj = self.pool['account.analytic.account']
+            analytic = analytic_obj.browse(cr, uid, account_id, context=context)
+            return {'value': {'to_invoice': analytic.to_invoice.id}}
+        return {}
 
 #Still needed??
 #    def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount,
