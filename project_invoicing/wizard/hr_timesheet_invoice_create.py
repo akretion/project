@@ -30,10 +30,16 @@ from openerp.osv import fields, orm
 from openerp.tools.translate import _
 from collections import defaultdict
 from openerp.osv.osv import except_osv
+from lxml import etree
+
 
 class hr_timesheet_project_invoice_create(orm.TransientModel):
     _name = 'hr.timesheet.project.invoice.create'
     _description = 'Create invoice from project timesheet'
+
+    _columns = {
+        'invoice_id': fields.many2one('account.invoice', 'Existing Invoice'),
+    }
 
     def view_init(self, cr, uid, fields, context=None):
         """
@@ -46,6 +52,7 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
         """
         hr_analytic_obj = self.pool.get('hr.analytic.timesheet')
         hr_analytic_ids = context and context.get('active_ids', [])
+        partner_id = False
         for hr_analytic in hr_analytic_obj.browse(cr, uid, hr_analytic_ids, context=context):
             if hr_analytic.invoice_id:
                 raise osv.except_osv(_('Warning!'),
@@ -53,13 +60,39 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
             if not hr_analytic.to_invoice:
                 raise osv.except_osv(_('Warning!'),
                     _("the analytic line %s can not be invoiced!")%hr_analytic.name)
+   
+    def fields_view_get(self, cr, uid, view_id=None, view_type='form', context=None, toolbar=False):
+        res = super(hr_timesheet_project_invoice_create, self).fields_view_get(cr, uid,
+            view_id=view_id,
+            view_type=view_type,
+            context=context,
+            toolbar=toolbar)
+        if view_type == 'form' and context and context.get('active_ids'):
+            eview = etree.fromstring(res['arch'])
+            field_invoice = eview.xpath("//field[@name='invoice_id']")[0]
+            hr_analytic_obj = self.pool.get('hr.analytic.timesheet')
+            partner_id = False
+            for hr_analytic in hr_analytic_obj.browse(cr, uid, context['active_ids'], context=context):
+                if partner_id and partner_id != hr_analytic.task_id.project_id.partner_id.id:
+                    field_invoice.getparent().remove(field_invoice)
+                    res['arch'] = etree.tostring(eview, pretty_print=True)
+                    return res
+                partner_id = hr_analytic.task_id.project_id.partner_id.id
+
+            separator = eview.xpath("//separator[@name='invoice']")[0]
+            separator.set('string',  _('All line will be invoiced to "%s". \n'
+                'You can select an existing draft invoice instead of creating '
+                'a new one. The existing invoice will be updated.\n')\
+                %hr_analytic.task_id.project_id.partner_id.name)
+            field_invoice.set('domain', "[('partner_id', '=', %s)]"%partner_id)
+            res['arch'] = etree.tostring(eview, pretty_print=True)
+        return res
 
     def do_create(self, cr, uid, ids, context=None):
         # Create an invoice based on selected timesheet lines
         timesheet_obj = self.pool.get('hr.analytic.timesheet')
         mod_obj = self.pool.get('ir.model.data')
         act_obj = self.pool.get('ir.actions.act_window')
-
         data = self.read(cr, uid, ids, [], context=context)[0]
         inv_ids = timesheet_obj.create_invoice(cr, uid,
             context['active_ids'], data, context=context)

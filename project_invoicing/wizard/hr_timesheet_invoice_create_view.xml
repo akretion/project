@@ -7,13 +7,14 @@
             <field name="model">hr.timesheet.project.invoice.create</field>
             <field name="arch" type="xml">
                 <form string="Create Invoice" version="7.0">
-                    <h1>Are you sure to create the invoice?</h1>
+                    <separator name='invoice' string='Timesheet lines have differents partners, an invoice for each partner will be created.'/>
+                    <field name='invoice_id' domain="[('partner_id', '=', context.get('partner_id'))]"/>
                     <footer>
                         <button name="do_create" string="Create Invoices" type="object" class="oe_highlight"/>
                         or
                         <button string="Cancel" class="oe_link" special="cancel" />
                     </footer>
-            </form>
+                </form>
             </field>
         </record>
         

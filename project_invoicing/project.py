@@ -156,6 +156,8 @@ class project_task(orm.Model):
         invoice_vals['invoice_line'] = lines_vals
         return invoice_vals
 
+    #TODO refactor me in order to support the add line from an
+    # existing invoice
     def create_invoice(self, cr, uid, ids, context=None):
         invoice_obj = self.pool.get('account.invoice')
         invoice_ids = []
@@ -300,18 +302,18 @@ class HrAnalyticTimesheet(orm.Model):
             return price
         raise orm.except_orm(_('USER ERROR'), _('NO PRICE HAVE BEEN FOUND'))
 
-    def _play_onchange_on_line(self, cr, uid, line, invoice_vals, context=None):
+    def _play_onchange_on_line(self, cr, uid, line, invoice, context=None):
         res = self.pool.get('account.invoice.line').product_id_change(cr, uid,
                     None,
                     line.product_id.id,
                     line.product_uom_id.id, 
                     qty = - line.amount,
                     type = 'out_invoice',
-                    partner_id = invoice_vals['partner_id'],
-                    fposition_id = invoice_vals['fiscal_position'],
-                    currency_id = invoice_vals['currency_id'],
+                    partner_id = invoice.partner_id.id,
+                    fposition_id = invoice.fiscal_position.id,
+                    currency_id = invoice.currency_id.id,
                     context = context,
-                    company_id = invoice_vals['company_id'])
+                    company_id = invoice.company_id.id)
         return res.get('value', [])
 
     def _get_qty2invoice(self, cr, uid, line, context=None):
@@ -323,8 +325,8 @@ class HrAnalyticTimesheet(orm.Model):
             to_uom_id=uom_id)
         return uom_id, qty
     
-    def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice_vals, context=None):
-        invoice_line = self._play_onchange_on_line(cr, uid, line, invoice_vals, context=context)
+    def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice, context=None):
+        invoice_line = self._play_onchange_on_line(cr, uid, line, invoice, context=context)
         if line.task_id.typology_id and \
                 line.task_id.typology_id.is_invoice_group_key:
             name = line.task_id.typology_id.name
@@ -382,21 +384,32 @@ class HrAnalyticTimesheet(orm.Model):
         if context is None:
             context = {}
         invoices_ids=[]
+
+        #In case that we have all timesheet line believe to the same partner
+        #we give the posibility in the wizard to update an existing invoice
+        #instead of creating a new one
+        existing_invoice_id = 'invoice_id' in data and data['invoice_id'][0] or False
+
         for account, group_lines in self.group_lines(cr, uid, ids, context=context).iteritems():
-            invoice_vals = self._prepare_invoice_vals(cr, uid, account, context=context)
-            ctx = context.copy()
-            partner = res_partner_obj.browse(cr, uid, invoice_vals['partner_id'], context)
-            ctx['lang'] = partner.lang
-            # set company_id in context, so the correct default journal will be selected
-            ctx['force_company'] = invoice_vals['company_id']
-            # set force_company in context so the correct product properties are selected (eg. income account)
-            ctx['company_id'] = invoice_vals['company_id']
-            invoice_id = invoice_obj.create(cr, uid, invoice_vals, context=ctx)
+            if existing_invoice_id:
+                invoice_id = existing_invoice_id
+            else:
+                invoice_vals = self._prepare_invoice_vals(cr, uid, account, context=context)
+                ctx = context.copy()
+                partner = res_partner_obj.browse(cr, uid, invoice_vals['partner_id'], context)
+                ctx['lang'] = partner.lang
+                # set company_id in context, so the correct default journal will be selected
+                ctx['force_company'] = invoice_vals['company_id']
+                # set force_company in context so the correct product properties are selected (eg. income account)
+                ctx['company_id'] = invoice_vals['company_id']
+                invoice_id = invoice_obj.create(cr, uid, invoice_vals, context=ctx)
+
+            invoice = invoice_obj.browse(cr, uid, invoice_id, context=context)
             invoices_ids.append(invoice_id)
             for key in group_lines:
                 line = group_lines[key].pop()
                 line_ids = [line.id]
-                invoice_line_vals = self._prepare_invoice_line_vals(cr, uid, line, account, invoice_vals, context=context)
+                invoice_line_vals = self._prepare_invoice_line_vals(cr, uid, line, account, invoice, context=context)
                 for line in group_lines[key]:
                     invoice_line_vals = self._update_invoice_line_vals(cr, uid, line, invoice_line_vals, context=context)
                     line_ids.append(line.id)
