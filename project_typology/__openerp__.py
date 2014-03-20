@@ -3,7 +3,7 @@
 #
 #    OpenERP, Open Source Management Solution
 #    Copyright (C) 2010 Akretion LDTA (<http://www.akretion.com>).
-#    
+#
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -19,23 +19,24 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-{
-    "name" : "Project requiring typologies",
-    "version": "1.0",
-    "author" : "Akretion",
-    "website" : "http://www.openerp.com",
-    "category" : "Generic Modules/Projects & Services",
-    "depends" : ["project"],
-    "description": """
 
+
+{'name': 'Project requiring typologies',
+ 'version': '0.0.1',
+ 'author': 'Akretion',
+ 'website': 'www.akretion.com',
+ 'license': 'AGPL-3',
+ 'category': 'Generic Modules',
+ 'description': """
         Adds typologies to organize the projects tasks.
-    """,
-    "init_xml" : [],
-    "demo_xml" : [],
-    "test" : [],
-    "update_xml": ["project_view.xml"],
-    'installable': True,
-    'active': False,
-    'certificate': None,
+ """,
+ 'depends': [
+     'project',
+ ],
+ 'data': [
+     'project_view.xml',
+     'security/ir.model.access.csv',
+ ],
+ 'installable': True,
+ 'application': True,
 }
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

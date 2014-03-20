@@ -3,7 +3,7 @@
 #
 #    OpenERP, Open Source Management Solution
 #    Copyright (C) 2010 Akretion LDTA (<http://www.akretion.com>).
-#    
+#
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,27 +20,22 @@
 #
 ##############################################################################
 
-from tools.translate import _
-from osv import fields, osv
-from datetime import datetime
-import netsvc
+from openerp.osv import fields, orm
 
-class project_typology(osv.osv):
+
+class project_typology(orm.Model):
     _name = 'project.typology'
     _description = 'Type of tasks to organize projects'
+
     _columns = {
         'name': fields.char('Name', size=64, required=True, translate=True),
         'product_id': fields.many2one('product.product', 'Product'),
-                }
+    }
 
-    _order = 'name'    
 
-project_typology()
-
-class project_task(osv.osv):
+class project_task(orm.Model):
     _inherit = 'project.task'
+
     _columns = {
         'typology_id': fields.many2one('project.typology', 'Typology'),
-                }
-    
-project_task()
+    }
