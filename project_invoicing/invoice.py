@@ -2,9 +2,10 @@
 ###############################################################################
 #
 #   Module for OpenERP 
-#   Copyright (C) 2013 Akretion (http://www.akretion.com).
+#   Copyright (C) 2012-TODAY Akretion (http://www.akretion.com).
 #   @author Sébastien BEAU <sebastien.beau@akretion.com>
 #           Benoît GUILLOT <benoit.guillot@akretion.com>
+#
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU Affero General Public License as
 #   published by the Free Software Foundation, either version 3 of the
@@ -35,10 +36,9 @@ class account_invoice_line(orm.Model):
         'invoicing_type': fields.selection([
             ('fixed_amount', 'Fixed Amount'),
             ('time_base', 'Time Base'),
-            ], 'Invoicing', required=True), 
+            ], 'Invoicing', required=True),
     }
 
     _defaults = {
         'invoicing_type': 'time_base',
     }
-
