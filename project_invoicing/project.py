@@ -28,18 +28,6 @@ import openerp.addons.decimal_precision as dp
 from collections import defaultdict
 
 
-class project_typology(orm.Model):
-    _inherit = 'project.typology'
-    _columns = {
-        'is_invoice_group_key': fields.boolean(
-            'Grouping Key for Invoicing',
-            help=('Tic that box if you want to group the task linked to this'
-                  'typology base on the typology id instead of the task id')),
-        'name': fields.char('Name', size=64, required=True, translate=True),
-        'product_id': fields.many2one('product.product', 'Product'),
-    }
-
-
 class account_analytic_account(orm.Model):
     _inherit = 'account.analytic.account'
 
@@ -52,13 +40,10 @@ class project_task(orm.Model):
     _inherit = "project.task"
 
     _columns = {
-        'product_id': fields.many2one('product.product', 'Product'),  # use for pack
+        'product_id': fields.many2one('product.product', 'Product'),
         'invoice_line_ids': fields.many2many(
             'account.invoice.line',
             string='Invoice Lines'),
-        'unit_price': fields.float(
-            'Price',
-            digits_compute=dp.get_precision('Product Price')),
         'invoicing_type': fields.selection([
             ('fixed_amount', 'Fixed Amount'),
             ('time_base', 'Time Base'),
@@ -87,50 +72,46 @@ class project_task(orm.Model):
             to_uom_id=uom_id)
         return uom_id, qty
 
-    #TODO FIXME
-    #In my case the price is managed on the feature
-    #for now I do not know what is the best behaviour without
-    #this module so I implement a really simple version for now
-    def _get_price(self, cr, uid, task, product, context=None):
-        pricelist = task.project_id.pricelist_id
-        partner_id = task.project_id.partner_id.id
-        price = pricelist.price_get(
-            product.id,
-            1.0,
-            partner_id,
-            context=context)[pricelist.id]
-        return price
-
-    def _prepare_invoice_line_vals(self, cr, uid, task, context=None):
-        fiscal_pos_obj = self.pool.get('account.fiscal.position')
+    def _get_onchange_product_id_params(self, cr, uid, task, invoice_vals, context=None):
         product = self._get_task_product(cr, uid, task, context=context)
+        uom_id, qty = self._get_qty2invoice(cr, uid, task, context=None)
         if not product:
             raise orm.except_orm(
                 _('Error'),
                 _('The task %s, have no product set. Fix it' % task.name))
-        general_account = product.product_tmpl_id.property_account_income \
-            or product.categ_id.property_account_income_categ
-        taxes = product.taxes_id
-        tax = fiscal_pos_obj.map_tax(
-            cr, uid,
-            task.project_id.partner_id.property_account_position,
-            taxes)
-        uom_id, qty = self._get_qty2invoice(cr, uid, task, context=context)
-        price_unit = self._get_price(cr, uid, task, product, context=context)
-        invoice_line_vals = {
-            'price_unit': price_unit,
-            'quantity': qty,
-            'invoice_line_tax_id': [(6, 0, tax)],
-            'name': task.name,
-            'product_id': product.id,
-            'invoice_line_tax_id': [(6, 0, tax)],
-            'uos_id': uom_id,
-            'account_id': general_account.id,
-            'account_analytic_id': task.project_id.analytic_account_id.id,
-            'task_ids': [(6, 0, [task.id])],
-            'invoicing_type': 'fixed_amount',
+        args = [cr, uid, None, product.id, uom_id]
+        kwargs = {
+            'qty': qty,
+            'type': 'out_invoice',
+            'partner_id': invoice_vals['partner_id'],
+            'fposition_id': invoice_vals['fiscal_position'],
+            'context': context,
+            'company_id': invoice_vals['company_id'],
         }
-        return invoice_line_vals
+        return args, kwargs
+
+    def _prepare_invoice_line_vals(self, cr, uid, task, invoice_vals, context=None):
+        invoice_line_obj = self.pool['account.invoice.line']
+        args, kwargs = self._get_onchange_product_id_params(
+            cr, uid, task, invoice_vals, context=context)
+        product_id, uom_id = args[3:4]
+        qty = kwargs['qty']
+        result = invoice_line_obj.product_id_change(*args, **kwargs)
+        vals = result['value']
+        vals.update({
+            'product_id': product_id,
+            'uos_id': uom_id,
+            'quantity': qty,
+            'invoicing_type': 'fixed_amount',
+            'task_ids': [(6, 0, [task.id])],
+            'account_analytic_id': task.project_id.analytic_account_id.id,
+            })
+        return vals
+
+    def _get_onchange_partner_id_params(self, cr, uid, task, context=None):
+        args = [cr, uid, None, 'out_invoice', task.project_id.partner_id.id]
+        kwargs = {'company_id': task.company_id.id}
+        return args, kwargs
 
     def _prepare_invoice_vals(self, cr, uid, project, grouped_tasks, context=None):
         partner = project.partner_id
@@ -141,29 +122,18 @@ class project_task(orm.Model):
                   'Pricelist fields in the Analytic Account:\n%s')
                 % (project.name,))
 
-        #Garder ou pas ?
-        #date_due = False
-        #if partner.property_payment_term:
-        #    pterm_list= account_payment_term_obj.compute(cr, uid,
-        #            partner.property_payment_term.id, value=1,
-        #            date_ref=time.strftime('%Y-%m-%d'))
-        #    if pterm_list:
-        #        pterm_list = [line[0] for line in pterm_list]
-        #        pterm_list.sort()
-        #        date_due = pterm_list[-1]
-
-        invoice_vals = {
+        args, kwargs = self._get_onchange_partner_id_params(
+            cr, uid, task, context=context)
+        result = self.onchange_partner_id(*args, **kwargs)
+        vals = result['value']
+        vals.update({
             'name': time.strftime('%d/%m/%Y') + ' - ' + project.name,
             'partner_id': partner.id,
-            'payment_term': partner.property_payment_term.id or False,
-            'account_id': partner.property_account_receivable.id,
-            'currency_id': project.pricelist_id.currency_id.id,
-            #'date_due': date_due,
-            'fiscal_position': partner.property_account_position.id,
-        }
+        })
         lines_vals = []
         for task in grouped_tasks:
-            line_vals = self._prepare_invoice_line_vals(cr, uid, task, context=context)
+            line_vals = self._prepare_invoice_line_vals(
+                cr, uid, vals, task, context=context)
             lines_vals.append([0, 0, line_vals])
         invoice_vals['invoice_line'] = lines_vals
         return invoice_vals
