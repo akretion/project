@@ -208,28 +208,6 @@ class hr_analytic_timesheet(orm.Model):
             return {'value': {'to_invoice': analytic.to_invoice.id}}
         return {}
 
-#Still needed??
-#    def on_change_unit_amount(self, cr, uid, sheet_id, prod_id, unit_amount,
-#                              company_id, unit=False, journal_id=False,
-#                              task_id=False, to_invoice=False, context=None):
-#        res = super(HrAnalyticTimesheet, self).on_change_unit_amount(
-#            cr, uid, sheet_id, prod_id, unit_amount, company_id, unit,
-#            journal_id, task_id, to_invoice, context)
-#        if 'value' in res and task_id:
-#            task_obj = self.pool.get('project.task')
-#            task = task_obj.browse(cr, uid, task_id)
-#            if task.fixed_amount:
-#                res['value']['to_invoice'] = False
-#        return res
-#
-#    def on_change_user_id(self, cr, uid, ids, user_id, parent_product_id):
-#        res = super(HrAnalyticTimesheet, self).on_change_user_id(cr, uid, ids, user_id)
-#        if parent_product_id:
-#            if not res.get('value'):
-#                res['value'] = {}
-#            res['value']['product_id'] = parent_product_id
-#        return res
-
     def _get_group_key(self, cr, uid, line, context=None):
         keys = ['product_id.id', 'product_uom_id.id']
 
