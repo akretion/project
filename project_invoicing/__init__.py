@@ -22,3 +22,4 @@
 import project
 import invoice
 import wizard
+import hr

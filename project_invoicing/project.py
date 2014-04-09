@@ -54,12 +54,14 @@ class project_task(orm.Model):
         'invoicing_type': 'time_base',
     }
 
-    def _get_task_product(self, cr, uid, task, context=None):
-        #TODO how to invoice simple task without sale order
-        #The wizard should propose a default product?
-        #and than sale_project_feature hide it?
-        #need to think twice for now add this temporary hack
-        return 1 #task.product_id
+    def _get_product(self, cr, uid, task, context=None):
+        employee_obj = self.pool['hr.employee']
+        employee = employee_obj._get_employee(
+            cr, uid,
+            task.user_id.id,
+            task.company_id.id,
+            context=context)
+        return employee.product_id.id
 
     def _get_qty2invoice(self, cr, uid, task, context=None):
         uom_obj = self.pool['product.uom']
@@ -84,7 +86,7 @@ class project_task(orm.Model):
         return args, kwargs
 
     def _prepare_invoice_line_vals(self, cr, uid, task, invoice_vals, context=None):
-        product_id = self._get_task_product(cr, uid, task, context=context)
+        product_id = self._get_product(cr, uid, task, context=context)
         if not product_id:
             raise orm.except_orm(
                 _('Error'),
@@ -315,6 +317,15 @@ class hr_analytic_timesheet(orm.Model):
             to_uom_id=uom_id)
         return uom_id, qty
 
+    def _get_product(self, cr, uid, line, context=None):
+        employee_obj = self.pool['hr.employee']
+        employee = employee_obj._get_employee(
+            cr, uid,
+            line.user_id.id,
+            line.company_id.id,
+            context=context)
+        return employee.product_id.id
+
     def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice, context=None):
         invoice_line = self._play_onchange_on_line(
             cr, uid, line, invoice, context=context)
@@ -324,12 +335,19 @@ class hr_analytic_timesheet(orm.Model):
         else:
             name = line.task_id.name
         uom_id, qty = self._get_qty2invoice(cr, uid, line, context=context)
+        product_id = self._get_product(cr, uid, line, context=context)
+        if not product_id:
+            #TODO improve error message
+            raise orm.except_orm(
+                _('Error'),
+                _('The line %s, have no product set. Fix it' % line.name))
+ 
         invoice_line.update({
             'price_unit': self._get_price(cr, uid, line, context=context),
             'quantity': qty,
             'discount': False,  # TODO
             'name': name,
-            'product_id': line.product_id.id,
+            'product_id': product_id,
             'uos_id': uom_id,
             'account_analytic_id': account.id,
             'task_ids': [[6, 0, [line.task_id.id]]],
