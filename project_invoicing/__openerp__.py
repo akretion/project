@@ -40,7 +40,9 @@
            'wizard/project_task_invoice_create_view.xml',
            'wizard/hr_timesheet_invoice_create_view.xml',
     ],
-    'demo_xml': [],
+    'demo': [
+       'project_demo.xml', 
+    ],
     'installable': True,
     'active': False,
 }

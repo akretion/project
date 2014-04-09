@@ -55,12 +55,11 @@ class project_task(orm.Model):
     }
 
     def _get_task_product(self, cr, uid, task, context=None):
-        product = False
-        if task.product_id:
-            product = task.product_id
-        elif task.typology_id:
-            product = task.typology_id.product_id
-        return product
+        #TODO how to invoice simple task without sale order
+        #The wizard should propose a default product?
+        #and than sale_project_feature hide it?
+        #need to think twice for now add this temporary hack
+        return 1 #task.product_id
 
     def _get_qty2invoice(self, cr, uid, task, context=None):
         uom_obj = self.pool['product.uom']
@@ -72,30 +71,32 @@ class project_task(orm.Model):
             to_uom_id=uom_id)
         return uom_id, qty
 
-    def _get_onchange_product_id_params(self, cr, uid, task, invoice_vals, context=None):
-        product = self._get_task_product(cr, uid, task, context=context)
-        uom_id, qty = self._get_qty2invoice(cr, uid, task, context=None)
-        if not product:
-            raise orm.except_orm(
-                _('Error'),
-                _('The task %s, have no product set. Fix it' % task.name))
-        args = [cr, uid, None, product.id, uom_id]
+    def _get_onchange_product_id_params(self, cr, uid, task, invoice_vals,
+                                        product_id, uom_id, qty, context=None):
+        args = [cr, uid, None, product_id, uom_id]
         kwargs = {
             'qty': qty,
             'type': 'out_invoice',
             'partner_id': invoice_vals['partner_id'],
-            'fposition_id': invoice_vals['fiscal_position'],
+            'fposition_id': invoice_vals.get('fiscal_position'),
             'context': context,
-            'company_id': invoice_vals['company_id'],
         }
         return args, kwargs
 
     def _prepare_invoice_line_vals(self, cr, uid, task, invoice_vals, context=None):
+        product_id = self._get_task_product(cr, uid, task, context=context)
+        if not product_id:
+            raise orm.except_orm(
+                _('Error'),
+                _('The task %s, have no product set. Fix it' % task.name))
+ 
+        uom_id, qty = self._get_qty2invoice(cr, uid, task, context=context)
+
         invoice_line_obj = self.pool['account.invoice.line']
+
         args, kwargs = self._get_onchange_product_id_params(
-            cr, uid, task, invoice_vals, context=context)
-        product_id, uom_id = args[3:4]
-        qty = kwargs['qty']
+            cr, uid, task, invoice_vals, product_id, uom_id, qty, context=context)
+        
         result = invoice_line_obj.product_id_change(*args, **kwargs)
         vals = result['value']
         vals.update({
@@ -108,35 +109,35 @@ class project_task(orm.Model):
             })
         return vals
 
-    def _get_onchange_partner_id_params(self, cr, uid, task, context=None):
-        args = [cr, uid, None, 'out_invoice', task.project_id.partner_id.id]
-        kwargs = {'company_id': task.company_id.id}
+    def _get_onchange_partner_id_params(self, cr, uid, project, context=None):
+        args = [cr, uid, None, 'invoice_out', project.partner_id.id]
+        kwargs = {'company_id': project.company_id.id}
         return args, kwargs
 
     def _prepare_invoice_vals(self, cr, uid, project, grouped_tasks, context=None):
-        partner = project.partner_id
-        if (not partner) or not (project.pricelist_id):
+        if not (project.partner_id.property_product_pricelist
+                or project.pricelist_id):
             raise orm.except_orm(
                 _('Analytic Account incomplete'),
-                _('Please fill in the Partner or Customer and Sale '
-                  'Pricelist fields in the Analytic Account:\n%s')
+                _('Please fill in the Pricelist on the Analytic Account %s'
+                  'or in the related partner')
                 % (project.name,))
 
         args, kwargs = self._get_onchange_partner_id_params(
-            cr, uid, task, context=context)
-        result = self.onchange_partner_id(*args, **kwargs)
+            cr, uid, project, context=context)
+        result = self.pool['account.invoice'].onchange_partner_id(*args, **kwargs)
         vals = result['value']
         vals.update({
             'name': time.strftime('%d/%m/%Y') + ' - ' + project.name,
-            'partner_id': partner.id,
+            'partner_id': project.partner_id.id,
         })
         lines_vals = []
         for task in grouped_tasks:
             line_vals = self._prepare_invoice_line_vals(
-                cr, uid, vals, task, context=context)
+                cr, uid, task, vals, context=context)
             lines_vals.append([0, 0, line_vals])
-        invoice_vals['invoice_line'] = lines_vals
-        return invoice_vals
+        vals['invoice_line'] = lines_vals
+        return vals
 
     #TODO refactor me in order to support the add line from an
     # existing invoice
