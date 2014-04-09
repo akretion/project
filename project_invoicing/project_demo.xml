@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="res_partner_one_shot_film" model="res.partner">
+            <field name="name">One Shot Film</field>
+            <field name="is_company">1</field>
+            <field eval="1" name="customer"/>
+            <field name="country_id" ref="base.fr"/>
+            <field name="website">www.oneshotfilm.fr</field>
+        </record>
+
+        <record id="analytic_one_shot_film" model="account.analytic.account">
+            <field name="name">One Shot Film Project</field>
+            <field name="use_timesheets">True</field>
+        </record>
+
+        <record id="project_project_1" model="project.project">
+            <field name="name">One Shot Film Project</field>
+            <field name="date_start" eval="time.strftime('%Y-%m-01 10:00:00')"/>
+            <field name="state">open</field>
+            <field name="type">normal</field>
+            <field name="color">3</field>
+            <field name="partner_id" ref="res_partner_one_shot_film"/>
+            <field name="parent_id" ref="project.all_projects_account"/>
+            <field name="analytic_account_id" ref="analytic_one_shot_film"/>
+            <field name="privacy_visibility">public</field>
+            <field name="members" eval="[(6, 0, [
+                    ref('base.user_root'),
+                    ref('base.user_demo')])]"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="description">Implement an OpenERP project at One Shot Film</field>
+            <field name="alias_model">project.task</field>
+            <field name="pricelist_id" ref="product.list0"/>
+        </record>
+
+        <!-- Tasks -->
+        <record id="project_task_1" model="project.task">
+            <field name="planned_hours" eval="2.0"/>
+            <field name="remaining_hours" eval="2.0"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="priority">4</field>
+            <field name="project_id" ref="project_project_1"/>
+            <field name="name">Install OpenERP</field>
+            <field name="invoicing_type">fixed_amount</field>
+            <field name="stage_id" ref="project.project_tt_deployment"/>
+        </record>
+
+        <record id="project_task_2" model="project.task">
+            <field name="planned_hours" eval="4.0"/>
+            <field name="remaining_hours" eval="4.0"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="priority">4</field>
+            <field name="project_id" ref="project_project_1"/>
+            <field name="name">Configure OpenERP</field>
+            <field name="invoicing_type">fixed_amount</field>
+            <field name="stage_id" ref="project.project_tt_deployment"/>
+        </record>
+ 
+        <record id="project_task_3" model="project.task">
+            <field name="planned_hours" eval="32.0"/>
+            <field name="remaining_hours" eval="32.0"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="priority">4</field>
+            <field name="project_id" ref="project_project_1"/>
+            <field name="name">Do customisation</field>
+            <field name="invoicing_type">time_base</field>
+        </record>
+
+        <!-- Timesheet -->
+
+        <record id="timesheet_1" model="hr_timesheet_sheet.sheet">
+            <field name="employee" ref="hr.employee"/>
+        </record>
+
+        <record id="timesheet_line_1" model="hr.analytic.timesheet">
+            <field name="user_id" ref="base.main_partner"/>
+            <field name="unit_amount">2</field>
+            <field name="name">Install OpenERP</field>
+            <field name="to_invoice" eval="False"/>
+            <field name="journal_id" ref="hr_timesheet.analytic_journal"/>
+            <field name="account_id" ref="analytic_one_shot_film"/>
+            <field name="task_id" ref="project_task_1"/>
+        </record>
+
+        <record id="timesheet_line_2" model="hr.analytic.timesheet">
+            <field name="user_id" ref="base.main_partner"/>
+            <field name="unit_amount">4</field>
+            <field name="name">Configure OpenERP</field>
+            <field name="to_invoice" eval="False"/>
+            <field name="journal_id" ref="hr_timesheet.analytic_journal"/>
+            <field name="account_id" ref="analytic_one_shot_film"/>
+            <field name="task_id" ref="project_task_2"/>
+        </record>
+
+      
+        <record id="timesheet_line_3" model="hr.analytic.timesheet">
+            <field name="user_id" ref="base.main_partner"/>
+            <field name="unit_amount">4</field>
+            <field name="name">Do Customisation 1</field>
+            <field name="to_invoice" ref="hr_timesheet_invoice.timesheet_invoice_factor1"/>
+            <field name="journal_id" ref="hr_timesheet.analytic_journal"/>
+            <field name="account_id" ref="analytic_one_shot_film"/>
+            <field name="task_id" ref="project_task_3"/>
+        </record>
+
+        <record id="timesheet_line_4" model="hr.analytic.timesheet">
+            <field name="user_id" ref="base.main_partner"/>
+            <field name="unit_amount">8</field>
+            <field name="name">Do Customisation 2</field>
+            <field name="to_invoice" ref="hr_timesheet_invoice.timesheet_invoice_factor1"/>
+            <field name="journal_id" ref="hr_timesheet.analytic_journal"/>
+            <field name="account_id" ref="analytic_one_shot_film"/>
+            <field name="task_id" ref="project_task_3"/>
+        </record>
+
+        <record id="timesheet_line_5" model="hr.analytic.timesheet">
+            <field name="user_id" ref="base.main_partner"/>
+            <field name="unit_amount">6</field>
+            <field name="name">Do Customisation 3</field>
+            <field name="to_invoice" ref="hr_timesheet_invoice.timesheet_invoice_factor1"/>
+            <field name="journal_id" ref="hr_timesheet.analytic_journal"/>
+            <field name="account_id" ref="analytic_one_shot_film"/>
+            <field name="task_id" ref="project_task_3"/>
+        </record>
+
+    </data>
+</openerp>
+
+
