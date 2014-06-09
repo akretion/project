@@ -132,6 +132,5 @@
             parent="menu_invoicing"
             sequence="20"/>
 
-
     </data>
 </openerp>
