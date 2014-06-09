@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Module for OpenERP
+  Copyright (C) 2014 Akretion (http://www.akretion.com). All Rights Reserved
+  @author Benoît GUILLOT <benoit.guillot@akretion.com>
+  The licence is in the file __openerp__.py
+-->
+
+<openerp>
+    <data>
+
+        <!-- INHERITED VIEW FOR THE OBJECT : project.issue -->
+
+        <record id="project_issue_form_view_modif" model="ir.ui.view">
+            <field name="name">project.issueform.viewmodif</field>
+            <field name="model">project.issue</field>
+            <field name="priority" eval="100"/>
+            <field name="inherit_id" ref="project_issue.project_issue_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/sheet/group/group/field[@name='priority']" position="after">
+                    <field name="support_level_id"
+                        on_change="on_change_support_level(support_level_id)"
+                        widget="selection"/>
+                    <field name="product_id" invisible="1"/>
+                </xpath>
+                <xpath expr="//notebook/page/field[@name='timesheet_ids']" position="attributes">
+                    <attribute name="context">{'default_user_id' : user_id, 'default_account_id' : analytic_account_id, 'default_product_id': product_id}</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="project_issue_tree_view" model="ir.ui.view">
+            <field name="name">issue_level.project_issue_tree_view</field>
+            <field name="model">project.issue</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="project_issue.project_issue_tree_view"/>
+            <field name="arch" type="xml">
+                <field name="priority" position="after">
+                    <field name="support_level_id"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- VIEWS FOR THE OBJECT : project.issue.level -->
+
+        <record model="ir.ui.view" id="project_issue_level_search_view">
+            <field name="name">Issue Level</field>
+            <field name="model">project.issue.level</field>
+            <field name="arch" type="xml">
+                <search string="Issue Level">
+                    <field name="name" string="Issue Level"/>
+                    <field name="product_id"/>
+                </search>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="project_issue_level_form_view">
+            <field name="name">Issue Level</field>
+            <field name="model">project.issue.level</field>
+            <field name="arch" type="xml">
+                <form string="Issue Level" version="7.0">
+                    <group>
+                        <group col="2">
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="product_id"/>
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="project_issue_level_action" model="ir.actions.act_window">
+            <field name="name">Issue Levels</field>
+            <field name="res_model">project.issue.level</field>
+            <field name="view_type">form</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to add a new level.
+              </p><p>
+                Define here the different level of the issues and linked it to the product.
+              </p>
+            </field>
+        </record>
+
+        <menuitem action="project_issue_level_action"
+            id="menu_project_issue_level"
+            parent="project_issue.menu_project_confi"
+            groups="base.group_no_one"/>
+
+    </data>
+</openerp>
