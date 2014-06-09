@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Module for OpenERP
+  Copyright (C) 2014 Akretion (http://www.akretion.com). All Rights Reserved
+  @author Benoît GUILLOT <benoit.guillot@akretion.com>
+  The licence is in the file __openerp__.py
+-->
+
+<openerp>
+    <data>
+        <!-- INHERITED VIEW FOR THE OBJECT : res_partner -->
+
+        <record id="res_partner_view_form" model="ir.ui.view">
+            <field name="name">project_issue_default_project.res_partner.view_form</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form" />
+            <field name="arch" type="xml">
+                <field name="property_account_position" position="after" version="7.0">
+                    <field name="issue_project_id"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
