@@ -23,7 +23,7 @@
 from openerp.osv import fields, orm
 
 
-class project_issue_support_level(orm.Model):
+class project_issue_level(orm.Model):
     _name = "project.issue.level"
     _descritpion = "Support level linked to product and project issue"
 
