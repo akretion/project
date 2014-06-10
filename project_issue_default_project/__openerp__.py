@@ -32,7 +32,7 @@
     'author': 'Akretion',
     'website': 'http://www.akretion.com/',
     'depends': [
-        'project_issue',
+        'project_issue_sheet',
         ],
     'data': [
         'partner_view.xml',

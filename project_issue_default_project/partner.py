@@ -30,6 +30,7 @@ class res_partner(orm.Model):
         'issue_project_id': fields.many2one(
             'project.project',
             'Issue project',
+            domain="[('partner_id', '=', context.get('active_id'))]",
             help="Default project for issues of this patner"),
     }
 
