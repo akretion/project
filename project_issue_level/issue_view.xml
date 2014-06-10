@@ -32,7 +32,6 @@
         <record id="project_issue_tree_view" model="ir.ui.view">
             <field name="name">issue_level.project_issue_tree_view</field>
             <field name="model">project.issue</field>
-            <field name="type">tree</field>
             <field name="inherit_id" ref="project_issue.project_issue_tree_view"/>
             <field name="arch" type="xml">
                 <field name="priority" position="after">
