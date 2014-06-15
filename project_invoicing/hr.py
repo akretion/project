@@ -35,9 +35,13 @@ class HrEmployee(orm.Model):
         if not employee_id:
             raise orm.except_orm(
                 _('Error'),
-                _('No employee found for user_id %s and company_id %s'))
+                _('No employee found for user_id %s and company_id %s')
+                % (user_id, company_id)
+                )
         elif len(employee_id) != 1:
             raise orm.except_orm(
                 _('Error'),
-                _('Too many employee found for user_id %s and company_id %s'))
+                _('Too many employee found for user_id %s and company_id %s')
+                % (user_id, company_id)
+                )
         return self.browse(cr, uid, employee_id[0], context=context) 

@@ -49,3 +49,23 @@ class project_task(orm.Model):
         return product
 
 
+class hr_analytic_timesheet(orm.Model):
+    _inherit = "hr.analytic.timesheet"
+
+    def _get_group_key(self, cr, uid, line, context=None):
+        keys = super(hr_analytic_timesheet, self).\
+            _get_group_key(cr, uid, line, context=context)
+        if line.task_id.typology_id and \
+           line.task_id.typology_id.is_invoicegroup_key:
+            keys.append('task_id.typology_id.id')
+            keys.remove('task_id.id')
+        return keys
+
+    def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice,
+                                   context=None):
+        vals = super(hr_analytic_timesheet, self)._prepare_invoice_line_vals(
+            cr, uid, line, account, invoice, context=context)
+        if line.task_id.typology_id and \
+           line.task_id.typology_id.is_invoice_group_key:
+            vals['name'] = line.task_id.typology_id.name
+        return res

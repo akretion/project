@@ -35,6 +35,36 @@ class account_analytic_account(orm.Model):
         'invoice_uom_id': fields.many2one('product.uom', 'Invoicing UoM'),
     }
 
+class project_project(orm.Model):
+    _inherit = 'project.project'
+
+    def _get_pricelist(self, cr, uid, project_id, context=None):
+        """
+        Return the pricelist object
+        """
+        if isinstance(project_id, (list, tuple)):
+            project_id = project_id[0]
+        project = self.browse(cr, uid, project_id, context=context)
+        if project.pricelist_id:
+            return project.pricelist_id
+        elif project.partner_id.property_product_pricelist:
+            return project.partner_id.property_product_pricelist
+        return None
+
+
+    def _get_mandatory_pricelist(self, cr, uid, project_id, context=None):
+        """
+        Return the pricelist object
+        """
+        pricelist = self._get_pricelist(cr, uid, project_id, context=context)
+        if not pricelist:
+            raise orm.except_orm(
+                _('Analytic Account incomplete'),
+                _('Please fill in the Pricelist on the Analytic Account %s'
+                  'or in the related partner')
+                % (project.name,))
+        return pricelist
+
 
 class project_task(orm.Model):
     _inherit = "project.task"
@@ -54,6 +84,10 @@ class project_task(orm.Model):
         'invoicing_type': 'time_base',
     }
 
+    def get_invoice_uom(self, cr, uid, task_id, context=None):
+        task = self.browse(cr, uid, task_id[0], context=context)
+        return task.project_id.invoice_uom_id
+
     def _get_product(self, cr, uid, task, context=None):
         employee_obj = self.pool['hr.employee']
         employee = employee_obj._get_employee(
@@ -65,13 +99,14 @@ class project_task(orm.Model):
 
     def _get_qty2invoice(self, cr, uid, task, context=None):
         uom_obj = self.pool['product.uom']
-        uom_id = task.project_id.invoice_uom_id.id
-        qty = uom_obj._compute_qty(
-            cr, uid,
-            task.project_id.company_uom_id.id,
-            task.planned_hours,
-            to_uom_id=uom_id)
-        return uom_id, qty
+        uom = task.get_invoice_uom()
+        if not uom:
+            raise orm.except_orm(
+                _('User Error'),
+                _('Please fill the unit of mesure for invoicing '
+                  'on the project'))
+        qty = uom_obj._hours_to_uom(uom, task.planned_hours)
+        return uom.id, qty
 
     def _get_onchange_product_id_params(self, cr, uid, task, invoice_vals,
                                         product_id, uom_id, qty, context=None):
@@ -117,14 +152,6 @@ class project_task(orm.Model):
         return args, kwargs
 
     def _prepare_invoice_vals(self, cr, uid, project, grouped_tasks, context=None):
-        if not (project.partner_id.property_product_pricelist
-                or project.pricelist_id):
-            raise orm.except_orm(
-                _('Analytic Account incomplete'),
-                _('Please fill in the Pricelist on the Analytic Account %s'
-                  'or in the related partner')
-                % (project.name,))
-
         args, kwargs = self._get_onchange_partner_id_params(
             cr, uid, project, context=context)
         result = self.pool['account.invoice'].onchange_partner_id(*args, **kwargs)
@@ -174,6 +201,25 @@ class hr_analytic_timesheet(orm.Model):
             'Invoice Line'),
     }
 
+    def on_change_unit_amount(self, cr, uid, id, product_id, unit_amount,
+            company_id, unit=False, journal_id=False, task_id=False,
+            to_invoice=False, project_id=False, context=None):
+        if context is None:
+            context = {}
+        res = super(hr_analytic_timesheet, self).on_change_unit_amount(
+                cr, uid, id, product_id, unit_amount, company_id, unit=unit,
+                journal_id=journal_id, task_id=task_id, to_invoice=to_invoice,
+                project_id=project_id, context=context)
+        
+        if task_id:
+            if not 'value' in res:
+                res['value'] = {}
+            task_obj = self.pool.get('project.task')
+            task = task_obj.browse(cr, uid, task_id, context=context)
+            if task.invoicing_type == 'fixed_amount':
+                res['value']['to_invoice'] = None
+        return res 
+
     def on_change_account_id(self, cr, uid, ids, account_id, user_id=False, context=None):
         res = super(hr_analytic_timesheet, self).\
             on_change_account_id(cr, uid, ids, account_id, user_id)
@@ -209,14 +255,7 @@ class hr_analytic_timesheet(orm.Model):
         return {}
 
     def _get_group_key(self, cr, uid, line, context=None):
-        keys = ['product_id.id', 'product_uom_id.id']
-
-        if line.task_id.typology_id and \
-                line.task_id.typology_id.is_invoice_group_key:
-            keys.append('task_id.typology_id.id')
-        else:
-            keys.append('task_id.id')
-        return keys
+        return ['product_id.id', 'product_uom_id.id', 'task_id.id']
 
     def _build_key(self, cr, uid, line, context=None):
         def getRecAttr(obj, fullKey):
@@ -236,12 +275,7 @@ class hr_analytic_timesheet(orm.Model):
         if not line.account_id.partner_id:
             raise orm.except_orm(
                 _('Hr Analytic Account incomplete !'),
-                _('Please fill in the Partner on the Account:\n%s.')
-                % (line.account_id.name,))
-        if not line.account_id.pricelist_id:  # still needed?
-            raise orm.except_orm(
-                _('Hr Analytic Account incomplete !'),
-                _('Please fill in the Pricelist on the Account:\n%s.')
+                _('Please fill the Partner on the Account/Project:\n%s.')
                 % (line.account_id.name,))
         return True
 
@@ -251,23 +285,20 @@ class hr_analytic_timesheet(orm.Model):
         for line in self.browse(cr, uid, ids, context=context):
             self._check_line(cr, uid, line, context=context)
             key = self._build_key(cr, uid, line, context=context)
-            result[line.account_id][key].append(line)
+            result[line.task_id.project_id][key].append(line)
         return result
 
-    #TODO FIXME
-    #In my case the price is managed on the feature
-    #for now I do not know what is the best behaviour without
-    #this module so I implement a really simple version for now
     def _get_price(self, cr, uid, line, context=None):
         if line.product_id:
-            pricelist = line.task_id.project_id.pricelist_id
+            pricelist = line.task_id.project_id.get_mandatory_pricelist()
             partner_id = line.task_id.project_id.partner_id.id
             price = pricelist.price_get(
                 line.product_id.id,
                 line.unit_amount or 1.0,
                 partner_id,
                 context=context)[pricelist.id]
-            return price
+            discount = line.to_invoice.factor
+            return discount, price
         raise orm.except_orm(_('USER ERROR'), _('NO PRICE HAVE BEEN FOUND'))
 
     def _play_onchange_on_line(self, cr, uid, line, invoice, context=None):
@@ -285,16 +316,6 @@ class hr_analytic_timesheet(orm.Model):
             company_id=invoice.company_id.id)
         return res.get('value', [])
 
-    def _get_qty2invoice(self, cr, uid, line, context=None):
-        uom_obj = self.pool['product.uom']
-        uom_id = line.account_id.invoice_uom_id.id
-        qty = uom_obj._compute_qty(
-            cr, uid,
-            line.account_id.company_uom_id.id,
-            line.unit_amount,
-            to_uom_id=uom_id)
-        return uom_id, qty
-
     def _get_product(self, cr, uid, line, context=None):
         employee_obj = self.pool['hr.employee']
         employee = employee_obj._get_employee(
@@ -304,27 +325,35 @@ class hr_analytic_timesheet(orm.Model):
             context=context)
         return employee.product_id.id
 
+    def _get_qty2invoice(self, cr, uid, line, context=None):
+        uom_obj = self.pool['product.uom']
+        uom = line.task_id.get_invoice_uom()
+        if not uom:
+            raise orm.except_orm(
+                _('User Error'),
+                _('Please fill the unit of mesure for invoicing '
+                  'on the project'))
+        qty = uom_obj._hours_to_uom(uom, line.unit_amount)
+        return uom.id, qty
+
     def _prepare_invoice_line_vals(self, cr, uid, line, account, invoice, context=None):
         invoice_line = self._play_onchange_on_line(
             cr, uid, line, invoice, context=context)
-        if line.task_id.typology_id and \
-                line.task_id.typology_id.is_invoice_group_key:
-            name = line.task_id.typology_id.name
-        else:
-            name = line.task_id.name
         uom_id, qty = self._get_qty2invoice(cr, uid, line, context=context)
+        # TODO Improve get product
         product_id = self._get_product(cr, uid, line, context=context)
         if not product_id:
             #TODO improve error message
             raise orm.except_orm(
                 _('Error'),
                 _('The line %s, have no product set. Fix it' % line.name))
+        discount, price = self._get_price(cr, uid, line, context=context)
  
         invoice_line.update({
-            'price_unit': self._get_price(cr, uid, line, context=context),
+            'price_unit': price,
             'quantity': qty,
-            'discount': False,  # TODO
-            'name': name,
+            'discount': discount,
+            'name': line.task_id.name,
             'product_id': product_id,
             'uos_id': uom_id,
             'account_analytic_id': account.id,
@@ -340,9 +369,9 @@ class hr_analytic_timesheet(orm.Model):
             invoice_line_vals['task_ids'][0][2].append(line.task_id.id)
         return invoice_line_vals
 
-    def _prepare_invoice_vals(self, cr, uid, account, context=None):
+    def _prepare_invoice_vals(self, cr, uid, project, context=None):
         account_payment_term_obj = self.pool.get('account.payment.term')
-        partner = account.partner_id
+        partner = project.partner_id
         date_due = False
         if partner.property_payment_term:
             pterm_list = account_payment_term_obj.compute(
@@ -354,14 +383,16 @@ class hr_analytic_timesheet(orm.Model):
                 pterm_list.sort()
                 date_due = pterm_list[-1]
 
+        pricelist = project._get_mandatory_pricelist()
+
         return {
-            'partner_id': account.partner_id.id,
-            'company_id': account.company_id.id,
+            'partner_id': project.partner_id.id,
+            'company_id': project.company_id.id,
             'payment_term': partner.property_payment_term.id or False,
             'account_id': partner.property_account_receivable.id,
-            'currency_id': account.pricelist_id.currency_id.id,
+            'currency_id': pricelist.currency_id.id,
             'date_due': date_due,
-            'fiscal_position': account.partner_id.property_account_position.id,
+            'fiscal_position': project.partner_id.property_account_position.id,
             'invoice_line': [],
         }
 
@@ -378,11 +409,11 @@ class hr_analytic_timesheet(orm.Model):
         #instead of creating a new one
         existing_invoice_id = data.get('invoice_id')
 
-        for account, group_lines in self.group_lines(cr, uid, ids, context=context).iteritems():
+        for project, group_lines in self.group_lines(cr, uid, ids, context=context).iteritems():
             if existing_invoice_id:
                 invoice_id = existing_invoice_id[0]
             else:
-                invoice_vals = self._prepare_invoice_vals(cr, uid, account, context=context)
+                invoice_vals = self._prepare_invoice_vals(cr, uid, project, context=context)
                 ctx = context.copy()
                 partner = res_partner_obj.browse(cr, uid, invoice_vals['partner_id'], context)
                 ctx['lang'] = partner.lang
@@ -400,7 +431,7 @@ class hr_analytic_timesheet(orm.Model):
                 line = group_lines[key].pop()
                 line_ids = [line.id]
                 invoice_line_vals = self._prepare_invoice_line_vals(
-                    cr, uid, line, account, invoice, context=context)
+                    cr, uid, line, project, invoice, context=context)
                 for line in group_lines[key]:
                     invoice_line_vals = self._update_invoice_line_vals(
                         cr, uid, line, invoice_line_vals, context=context)
