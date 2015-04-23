@@ -79,11 +79,11 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
             hr_analytic_obj = self.pool.get('hr.analytic.timesheet')
             partner_id = False
             for hr_analytic in hr_analytic_obj.browse(cr, uid, context['active_ids'], context=context):
-                if partner_id and partner_id != hr_analytic.task_id.project_id.partner_id.id:
+                if partner_id and partner_id != hr_analytic.account_id.partner_id.id:
                     field_invoice.getparent().remove(field_invoice)
                     res['arch'] = etree.tostring(eview, pretty_print=True)
                     return res
-                partner_id = hr_analytic.task_id.project_id.partner_id.id
+                partner_id = hr_analytic.account_id.partner_id.id
 
             separator = eview.xpath("//separator[@name='invoice']")[0]
             separator.set(
@@ -91,7 +91,7 @@ class hr_timesheet_project_invoice_create(orm.TransientModel):
                 _('All line will be invoiced to "%s". \n'
                   'You can select an existing draft invoice instead of creating '
                   'a new one. The existing invoice will be updated.\n')
-                % hr_analytic.task_id.project_id.partner_id.name)
+                % hr_analytic.account_id.partner_id.name)
             field_invoice.set('domain', "[('partner_id', '=', %s)]" % partner_id)
             res['arch'] = etree.tostring(eview, pretty_print=True)
         return res

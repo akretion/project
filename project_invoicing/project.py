@@ -285,7 +285,7 @@ class hr_analytic_timesheet(orm.Model):
         for line in self.browse(cr, uid, ids, context=context):
             self._check_line(cr, uid, line, context=context)
             key = self._build_key(cr, uid, line, context=context)
-            result[line.task_id.project_id][key].append(line)
+            result[line.account_id][key].append(line)
         return result
 
     def _get_price(self, cr, uid, line, context=None):
@@ -348,7 +348,6 @@ class hr_analytic_timesheet(orm.Model):
                 _('Error'),
                 _('The line %s, have no product set. Fix it' % line.name))
         discount, price = self._get_price(cr, uid, line, context=context)
- 
         invoice_line.update({
             'price_unit': price,
             'quantity': qty,
@@ -359,18 +358,20 @@ class hr_analytic_timesheet(orm.Model):
             'account_analytic_id': account.id,
             'task_ids': [[6, 0, [line.task_id.id]]],
             'invoicing_type': 'time_base',
+            'invoice_line_tax_id': [[6, 0, invoice_line['invoice_line_tax_id']]],
         })
         return invoice_line
 
     def _update_invoice_line_vals(self, cr, uid, line, invoice_line_vals, context=None):
         uom_id, qty = self._get_qty2invoice(cr, uid, line, context=context)
         invoice_line_vals['quantity'] += qty
-        if not line.task_id.id in invoice_line_vals['task_ids'][0][2]:
+        if line.task_id and not line.task_id.id in invoice_line_vals['task_ids'][0][2]:
             invoice_line_vals['task_ids'][0][2].append(line.task_id.id)
         return invoice_line_vals
 
     def _prepare_invoice_vals(self, cr, uid, project, context=None):
         account_payment_term_obj = self.pool.get('account.payment.term')
+        print "oioioi?"
         partner = project.partner_id
         date_due = False
         if partner.property_payment_term:
@@ -383,7 +384,7 @@ class hr_analytic_timesheet(orm.Model):
                 pterm_list.sort()
                 date_due = pterm_list[-1]
 
-        pricelist = project._get_mandatory_pricelist()
+        pricelist = project.pricelist_id
 
         return {
             'partner_id': project.partner_id.id,
@@ -407,9 +408,11 @@ class hr_analytic_timesheet(orm.Model):
         #In case that we have all timesheet line believe to the same partner
         #we give the posibility in the wizard to update an existing invoice
         #instead of creating a new one
+        print "???????????????********"
         existing_invoice_id = data.get('invoice_id')
-
+        #import pdb; pdb.set_trace()
         for project, group_lines in self.group_lines(cr, uid, ids, context=context).iteritems():
+            print "*****************************", project, "ll", group_lines
             if existing_invoice_id:
                 invoice_id = existing_invoice_id[0]
             else:
