@@ -35,7 +35,7 @@ class IrValues(models.Model):
         res = super(IrValues, self).get_actions(
             action_slot, model, res_id=res_id)
         available_models = [
-            x[0]for x in self.env['project.issue']._authorised_models()
+            x[0] for x in self.env['project.issue']._authorised_models()
             if x[0] != 'project.issue']
         if action_slot == 'client_action_multi' and model in available_models:
             action = self.set_issue_action(model, res_id=res_id)

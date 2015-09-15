@@ -18,8 +18,9 @@
 #
 ##############################################################################
 
-from openerp import models, fields, api, SUPERUSER_ID
+from openerp import models, fields, api, _, SUPERUSER_ID
 from openerp.tools.safe_eval import safe_eval
+from openerp.exceptions import Warning as UserError
 
 
 class ProjectIssue(models.Model):
@@ -36,8 +37,12 @@ class ProjectIssue(models.Model):
         models = self.env['res.request.link'].search([])
         return [(x.object, x.name) for x in models]
 
+    action_id = fields.Many2one(
+        'ir.actions.act_window', string="Action",
+        help="Action called to go to the original window")
     reference = fields.Reference(
-        selection='_authorised_models', string="Issue Origin")
+        selection='_authorised_models',
+        string="Issue Origin", readonly=True)
 
     @api.model
     def default_get(self, fields):
@@ -48,7 +53,29 @@ class ProjectIssue(models.Model):
         if 'from_model' in self._context and 'from_id' in self._context:
             vals['reference'] = '%s,%s' % (self._context['from_model'],
                                            self._context['from_id'])
+        if 'from_action' in self._context:
+            vals['action_id'] = self._context['from_action']
         return vals
+
+    @api.multi
+    def goto_document(self):
+        self.ensure_one()
+        if self.reference:
+            action = {
+                'name': 'Issue to original document',
+                'res_model': self.reference._model._name,
+                'res_id': self.reference.id,
+                'type': u'ir.actions.act_window',
+                'target': 'current',
+                'view_mode': 'form',
+            }
+            if self.action_id:
+                action['id'] = self.action_id.id
+                action['action_id'] = self.action_id.id
+            return action
+        raise UserError(_(
+            "Field 'reference' is not set.\n"
+            "Impossible to go to the original document"))
 
 
 class IrActionActWindows(models.Model):
@@ -65,6 +92,9 @@ class IrActionActWindows(models.Model):
                 'from_model': context.get('active_model'),
                 'from_id': context.get('active_id'),
             })
+            if 'params' in context and 'action':
+                action['context'].update({
+                    'from_action': context['params'].get('action')})
 
         res = super(IrActionActWindows, self).read(
             cr, uid, ids, fields=fields, context=context, load=load)
