@@ -35,6 +35,8 @@ class ProjectTask(models.Model):
 
     issue_tracker_url = fields.Char('Bug tracker URL', size=255)
     issue_number = fields.Char('Issue number', size=64)
+    display_name = fields.Char(string='Name',
+                               compute='_compute_display_name')
 
     @api.multi
     def _set_issue_number(self):
@@ -63,3 +65,12 @@ class ProjectTask(models.Model):
         res = super(ProjectTask, self).write(vals)
         self._set_issue_number()
         return res
+
+    @api.one
+    @api.depends('name', 'issue_number')
+    def _compute_display_name(self):
+        if self.issue_number:
+            names = [self.issue_number, self.name]
+            self.display_name = ' '.join(names)
+        else:
+            self.display_name = self.name

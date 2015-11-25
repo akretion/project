@@ -13,28 +13,52 @@
            </field>
         </record>
 
-
         <record id="project_task_issue_form_view" model="ir.ui.view">
             <field name="name">project.task.issue.form.view</field>
             <field name="model">project.task</field>
             <field name="inherit_id" ref="project.view_task_form2"/>
             <field name="arch" type="xml">
-
                 <field name="name" position="before">
                     <field name="issue_number" readonly="1"/>
                 </field>
-
                 <field name="reviewer_id" position="after">
                     <field name="issue_tracker_url"/>
                 </field>
+           </field>
+       </record>
 
+       <record id="project_task_issue_tree_view" model="ir.ui.view">
+           <field name="name">project.task.issue.tree.view</field>
+           <field name="model">project.task</field>
+           <field name="inherit_id" ref="project.view_task_tree2"/>
+           <field name="arch" type="xml">
+               <tree position="attributes">
+                   <attribute name="create">0</attribute>
+               </tree>
+               <field name="name" position="replace">
+                   <field name="display_name" readonly="1"/>
+               </field>
+           </field>
+       </record>
+
+       <record id="project_task_issue_kanban_view" model="ir.ui.view">
+           <field name="name">project.task.issue.tree.view</field>
+           <field name="model">project.task</field>
+           <field name="inherit_id" ref="project.view_task_kanban"/>
+           <field name="arch" type="xml">
+               <kanban position="attributes">
+                   <attribute name="create">0</attribute>
+               </kanban>
+               <field name="name" position="replace">
+                   <field name="display_name" readonly="1"/>
+               </field>
            </field>
        </record>
 
        <record id="action_view_task_issue" model="ir.actions.act_window">
             <field name="name">Issues</field>
             <field name="res_model">project.task</field>
-            <field name="view_mode">kanban,tree,form,calendar,gantt,graph</field>
+            <field name="view_mode">kanban,tree,form</field>
             <field name="search_view_id" ref="project.view_task_search_form"/>
             <field name="domain" eval="[('project_id','=',ref('project_issue'))]"/>
             <field name="help" type="html">
