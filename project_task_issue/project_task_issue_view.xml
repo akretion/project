@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="project_project_form_view" model="ir.ui.view">
+            <field name="name">project.project.form.view</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="project.edit_project"/>
+            <field name="arch" type="xml">
+                <field name="parent_id" position="after">
+                    <field name="issue_sequence_id"/>
+                </field>
+           </field>
+        </record>
+
+
+        <record id="project_task_issue_form_view" model="ir.ui.view">
+            <field name="name">project.task.issue.form.view</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="project.view_task_form2"/>
+            <field name="arch" type="xml">
+
+                <field name="name" position="before">
+                    <field name="issue_number" readonly="1"/>
+                </field>
+
+                <field name="reviewer_id" position="after">
+                    <field name="issue_tracker_url"/>
+                </field>
+
+           </field>
+       </record>
+
+       <record id="action_view_task_issue" model="ir.actions.act_window">
+            <field name="name">Issues</field>
+            <field name="res_model">project.task</field>
+            <field name="view_mode">kanban,tree,form,calendar,gantt,graph</field>
+            <field name="search_view_id" ref="project.view_task_search_form"/>
+            <field name="domain" eval="[('project_id','=',ref('project_issue'))]"/>
+            <field name="help" type="html">
+                <p>
+                   Here you can enter your issue
+                </p>
+            </field>
+        </record>
+
+        <menuitem action="action_view_task_issue"
+            id="menu_action_view_task_issue"
+            parent="project.menu_project_management"
+            sequence="4"
+        />
+
+    </data>
+</openerp>
