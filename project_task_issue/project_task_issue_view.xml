@@ -18,6 +18,9 @@
             <field name="model">project.task</field>
             <field name="inherit_id" ref="project.view_task_form2"/>
             <field name="arch" type="xml">
+               <form position="attributes">
+                   <attribute name="create">0</attribute>
+               </form>
                 <field name="name" position="before">
                     <field name="issue_number" readonly="1"/>
                 </field>
