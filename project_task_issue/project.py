@@ -39,6 +39,35 @@ class ProjectTask(models.Model):
                                compute='_compute_display_name')
 
     @api.multi
+    def _read_group_stage_ids(self, domain, read_group_order=None, access_rights_uid=None):
+
+        # TODO impmement access_right_uid
+        stage_obj = self.env['project.task.type']
+        order = stage_obj._order
+
+        if read_group_order == 'stage_id desc':
+            order = '%s desc' % order
+
+        search_domain = []
+        project_id = self._resolve_project_id_from_context()
+        if project_id:
+            search_domain.extend([('project_ids', '=', project_id)])
+
+        stages = stage_obj.search(search_domain, order=order)
+
+        fold = {}
+        result = []
+        for stage in stages:
+            fold[stage.id] = stage.fold or False
+            result.append((stage.id, stage.name))
+
+        return result, fold
+
+    _group_by_full = {
+        'stage_id': _read_group_stage_ids,
+    }
+
+    @api.multi
     def _set_issue_number(self):
         sequence_obj = self.env['ir.sequence']
         for task in self:

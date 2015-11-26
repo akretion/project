@@ -11,12 +11,12 @@
     <field name="name">Project Task Issue</field>
     <field name="code">project.task.issue</field>
     <field name="prefix">ISSUE-</field>
-    <field name="padding">7</field>
+    <field name="padding">0</field>
     <field name="company_id" eval="False"/>
 </record>
 
 <record id="project_issue" model="project.project">
-    <field name="name">Issue</field>
+    <field name="name">Issues</field>
     <field name="active" eval="True"/>
     <field name="state">open</field>
     <field name="issue_sequence_id" ref="seq_project_task_issue"/>
