@@ -76,7 +76,7 @@ class ProjectTask(models.Model):
                 continue
 
             sequence = task.project_id.issue_sequence_id
-            project_issue = self.env.ref('project_task_issue.project_issue')
+            project_issue = self.env.ref('project_ak.project_issue')
             if task.project_id == project_issue and \
                     not task.issue_number and sequence:
                 task.issue_number = sequence_obj.next_by_id(

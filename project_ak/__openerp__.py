@@ -33,8 +33,8 @@ Please refer to that module's description.
         'project',
     ],
     'data': [
-        'project_task_issue_view.xml',
         'project_data.xml',
+        'project_ak_view.xml',
     ],
     'installable': True,
 }
