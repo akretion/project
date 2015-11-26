@@ -18,7 +18,7 @@
 #
 ##############################################################################
 {
-    'name': 'Project issues for task',
+    'name': 'Akretion Project',
     'summary': 'Use Project task for issues',
     'version': '0.1',
     "category": "Project Management",
@@ -34,7 +34,7 @@ Please refer to that module's description.
     ],
     'data': [
         'project_data.xml',
-        'project_ak_view.xml',
+        'project_task_issue_view.xml',
     ],
     'installable': True,
 }

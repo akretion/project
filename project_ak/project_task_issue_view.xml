@@ -64,7 +64,7 @@
             <field name="view_mode">kanban,tree,form</field>
             <field name="search_view_id" ref="project.view_task_search_form"/>
             <field name="domain" eval="[('issue_number','!=','')]"/>
-            <field name="context" eval="{'default_project_id': ref('project_task_issue.project_issue')}"/>
+            <field name="context" eval="{'default_project_id': ref('project_ak.project_issue')}"/>
             <field name="help" type="html">
                 <p>
                    Here you can view your issues
