@@ -16,7 +16,6 @@ class Project(models.Model):
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
         "Analytic Account",
-        required=True,
         ondelete="restrict",
         index=True,
     )
@@ -145,10 +144,16 @@ class Project(models.Model):
         return None
 
     def prepare_analytics_vals(self, vals):
+        company = (
+            self.env["res.company"].browse(vals.get("company_id"))
+            if vals.get("company_id")
+            else self.env.company
+        )
         return {
             "name": vals.get("name", _("Unknown Analytic Account")),
             "company_id": vals.get("company_id", self.env.user.company_id.id),
             "partner_id": vals.get("partner_id"),
+            "plan_id": company.analytic_plan_id.id,
             "active": True,
         }
 
@@ -174,14 +179,13 @@ class Project(models.Model):
         return new_vals
 
     parent_id = fields.Many2one(
-        related="analytic_account_id.parent_id",
-        readonly=False,
+        related="analytic_account_id.parent_id", readonly=False, store=True
     )
     child_ids = fields.One2many(
         related="analytic_account_id.child_ids",
         readonly=False,
     )
-    project_child_complete_ids = fields.Many2many(
+    project_child_complete_ids = fields.One2many(
         comodel_name="project.project",
         string="Project Hierarchy",
         compute="_compute_child",
@@ -189,9 +193,10 @@ class Project(models.Model):
     has_project_child_complete_ids = fields.Boolean(
         compute="_compute_has_child",
     )
-    wbs_indent = fields.Char(
+    wbs_indent = fields.Integer(
         related="analytic_account_id.wbs_indent",
-        readonly=False,
+        store=True,
+        default=1,
     )
     complete_wbs_code = fields.Char(
         related="analytic_account_id.complete_wbs_code",
@@ -213,21 +218,20 @@ class Project(models.Model):
     account_class = fields.Selection(
         related="analytic_account_id.account_class",
         store=True,
-        default="project",
         readonly=False,
     )
 
-    @api.model
-    def create(self, vals):
-        analytic_vals = self.prepare_analytics_vals(vals)
-        if "analytic_account_id" not in vals:
-            aa = self.env["account.analytic.account"].create(analytic_vals)
-            vals.update({"analytic_account_id": aa.id})
-            if not vals.get("code"):
-                vals.update({"code": aa.code})
-            vals = self.update_project_from_analytic_vals(vals)
-        res = super(Project, self).create(vals)
-        return res
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            analytic_vals = self.prepare_analytics_vals(vals)
+            if "analytic_account_id" not in vals:
+                aa = self.env["account.analytic.account"].create(analytic_vals)
+                vals.update({"analytic_account_id": aa.id})
+                if not vals.get("code"):
+                    vals.update({"code": aa.code})
+                vals = self.update_project_from_analytic_vals(vals)
+        return super().create(vals_list)
 
     @api.model
     def action_open_child_view(self, act_window):
@@ -283,7 +287,7 @@ class Project(models.Model):
         return res
 
     def write(self, vals):
-        res = super(Project, self).write(vals)
+        res = super().write(vals)
         if "parent_id" in vals:
             for account in self.env["account.analytic.account"].browse(
                 self.analytic_account_id.get_child_accounts().keys()
@@ -293,6 +297,19 @@ class Project(models.Model):
         if "active" in vals and vals["active"]:
             for project in self.filtered(lambda p: not p.analytic_account_id.active):
                 project.analytic_account_id.active = True
+        if "project_child_complete_ids" in vals:
+            for project in self:
+                values = {}
+                for child_vals in vals.get("project_child_complete_ids"):
+                    if not isinstance(child_vals[1], int):
+                        values = child_vals[2]
+                        values["parent_id"] = project.analytic_account_id.id
+                        project.create(values)
+                    elif (
+                        not child_vals[2]
+                        and child_vals[1] not in project.project_child_complete_ids.ids
+                    ):
+                        self.browse(child_vals[1]).unlink()
         return res
 
     def action_open_parent_kanban_view(self):
@@ -331,3 +348,19 @@ class Project(models.Model):
             "context": self.env.context,
         }
         return view
+
+    @api.model
+    def read_group(
+        self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True
+    ):
+        if "wbs_indent" in fields:
+            fields.remove("wbs_indent")
+        return super().read_group(
+            domain,
+            fields,
+            groupby,
+            offset=offset,
+            limit=limit,
+            orderby=orderby,
+            lazy=lazy,
+        )

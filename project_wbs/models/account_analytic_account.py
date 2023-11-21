@@ -8,6 +8,13 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
+ACCOUNT_CLASS_SELECTION = [
+    ("project", "Project"),
+    ("phase", "Phase"),
+    ("deliverable", "Deliverable"),
+    ("work_package", "Work Package"),
+]
+
 
 class AccountAnalyticAccount(models.Model):
     _inherit = "account.analytic.account"
@@ -41,7 +48,7 @@ class AccountAnalyticAccount(models.Model):
         return result
 
     def write(self, vals):
-        res = super(AccountAnalyticAccount, self).write(vals)
+        res = super().write(vals)
         if vals.get("parent_id"):
             for account in self.browse(self.get_child_accounts().keys()):
                 account._complete_wbs_code_calc()
@@ -53,7 +60,7 @@ class AccountAnalyticAccount(models.Model):
                 ).write({"active": account.active})
         return res
 
-    @api.depends("code")
+    @api.depends("code", "wbs_indent")
     def _complete_wbs_code_calc(self):
         for account in self:
             data = []
@@ -87,34 +94,40 @@ class AccountAnalyticAccount(models.Model):
                     data = data[0]
             account.complete_wbs_name = data or ""
 
-    def _wbs_indent_calc(self):
+    @api.depends("parent_id", "child_ids")
+    def _compute_wbs_indent(self):
         for account in self:
-            data = []
+            data = 1
             acc = account
             while acc:
                 if acc.name and acc.parent_id:
-                    data.insert(0, ">")
-
+                    data += 1
                 acc = acc.parent_id
-            if data:
-                if len(data) >= 2:
-                    data = "".join(data)  # pragma: no cover
-                else:
-                    data = data[0]
-            account.wbs_indent = data or ""
+            account.wbs_indent = data
 
-    @api.depends("account_class", "parent_id")
+    @api.depends("account_class", "parent_id", "wbs_indent", "child_ids")
     def _compute_project_analytic_id(self):
         for analytic in self:
-            if analytic.parent_id:
-                current = analytic.parent_id
-            else:
-                current = analytic
-            while current.id:
-                if current.account_class == "project":
-                    analytic.project_analytic_id = current
-                    break
-                current = current.parent_id
+            accounts = analytic
+            childs = analytic.child_ids
+            while childs:
+                accounts += childs
+                new_childs = self.browse()
+                for child in childs:
+                    if child.child_ids:
+                        accounts += child.child_ids
+                        new_childs += child.child_ids
+                childs = new_childs
+            for acc in accounts:
+                if acc.parent_id:
+                    current = acc.parent_id
+                else:
+                    current = acc
+                while current.id:
+                    if current.wbs_indent == 1:
+                        acc.project_analytic_id = current
+                        break
+                    current = current.parent_id
 
     @api.model
     def _default_parent(self):
@@ -128,7 +141,7 @@ class AccountAnalyticAccount(models.Model):
     def _default_user(self):
         return self.env.context.get("user_id", self.env.user)
 
-    wbs_indent = fields.Char(compute=_wbs_indent_calc, string="Level")
+    wbs_indent = fields.Integer(compute=_compute_wbs_indent, string="Level")
 
     complete_wbs_code = fields.Char(
         compute=_complete_wbs_code_calc,
@@ -164,12 +177,7 @@ class AccountAnalyticAccount(models.Model):
     manager_id = fields.Many2one("res.users", "Manager", tracking=True)
 
     account_class = fields.Selection(
-        [
-            ("project", "Project"),
-            ("phase", "Phase"),
-            ("deliverable", "Deliverable"),
-            ("work_package", "Work Package"),
-        ],
+        ACCOUNT_CLASS_SELECTION,
         "Class",
         default="project",
         help="The classification allows you to create a proper project "
@@ -189,7 +197,7 @@ class AccountAnalyticAccount(models.Model):
         default["code"] = self.env["ir.sequence"].next_by_code(
             "account.analytic.account.code"
         )
-        return super(AccountAnalyticAccount, self).copy(default)
+        return super().copy(default)
 
     @api.depends("code")
     def code_get(self):
@@ -232,7 +240,7 @@ class AccountAnalyticAccount(models.Model):
     _sql_constraints = [
         (
             "analytic_unique_wbs_code",
-            "UNIQUE (complete_wbs_code)",
+            "check(1=1)",
             _("The full wbs code must be unique!"),
         ),
     ]
