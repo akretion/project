@@ -81,7 +81,10 @@ class IrActionActWindows(models.Model):
             context = {}
 
         def update_context(action):
-            action['context'] = safe_eval(action.get('context', '{}'))
+            context = action.get('context', '{}')
+            if isinstance(context, str) or isinstance(context, unicode):
+                context = safe_eval(action.get('context', '{}'))
+            action['context'] = context
             action['context'].update({
                 'from_model': context.get('active_model'),
                 'from_id': context.get('active_id'),
